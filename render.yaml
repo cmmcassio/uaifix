@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: uaifix-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+
+    envVars:
+      - key: MONGO_URL
+        sync: false          # colar a connection string do MongoDB Atlas
+
+      - key: DB_NAME
+        value: uaifix
+
+      - key: SECRET_KEY
+        generateValue: true  # Render gera automaticamente uma chave forte
+
+      - key: ALGORITHM
+        value: HS256
+
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "10080"
+
+      - key: ADMIN_EMAIL
+        sync: false          # ex: cassio@uaifix.com.br
+
+      - key: ADMIN_PASSWORD
+        sync: false          # senha forte para o painel admin
+
+      - key: UPLOADS_DIR
+        value: uploads
+
+      - key: FRONTEND_URL
+        sync: false          # colar a URL da Vercel após o deploy do frontend
+
+      - key: BACKEND_URL
+        sync: false          # colar a própria URL do Render após o deploy
