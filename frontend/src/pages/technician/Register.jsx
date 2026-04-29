@@ -4,7 +4,7 @@ import api from '../../api/client'
 import ProgressSteps from '../../components/ProgressSteps'
 import FileUpload from '../../components/FileUpload'
 
-const STEPS = ['Dados', 'Endereço', 'Documentos', 'Referência', 'Termos']
+const STEPS = ['Dados', 'Endereço', 'CPF', 'Documentos', 'Termos']
 
 const TERMS_TEXT = `TERMO DE RESPONSABILIDADE — UAIFIX
 
@@ -77,9 +77,9 @@ export default function TechnicianRegister() {
   const [errors, setErrors] = useState({})
 
   const [form, setForm] = useState({
-    name: '', cpf: '', email: '', phone: '', password: '', confirmPassword: '',
+    name: '', phone: '', email: '', password: '', confirmPassword: '',
     zip_code: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '',
-    ref_name: '', ref_contact: '', ref_type: 'supplier',
+    cpf: '',
     termsAccepted: false,
   })
   const [files, setFiles] = useState({ selfie: null, proof_of_address: null })
@@ -94,9 +94,8 @@ export default function TechnicianRegister() {
     const e = {}
     if (step === 1) {
       if (!form.name.trim()) e.name = 'Nome obrigatório'
-      if (!validateCPF(form.cpf)) e.cpf = 'CPF inválido'
+      if (form.phone.replace(/\D/g, '').length < 10) e.phone = 'WhatsApp inválido'
       if (!form.email.includes('@')) e.email = 'E-mail inválido'
-      if (form.phone.replace(/\D/g, '').length < 10) e.phone = 'Telefone inválido'
       if (form.password.length < 8) e.password = 'Mínimo 8 caracteres'
       if (form.password !== form.confirmPassword) e.confirmPassword = 'Senhas não conferem'
     }
@@ -109,12 +108,11 @@ export default function TechnicianRegister() {
       if (!form.state.trim()) e.state = 'Estado obrigatório'
     }
     if (step === 3) {
-      if (!files.selfie) e.selfie = 'Selfie obrigatória'
-      if (!files.proof_of_address) e.proof_of_address = 'Comprovante obrigatório'
+      if (!validateCPF(form.cpf)) e.cpf = 'CPF inválido'
     }
     if (step === 4) {
-      if (!form.ref_name.trim()) e.ref_name = 'Nome obrigatório'
-      if (!form.ref_contact.trim()) e.ref_contact = 'Contato obrigatório'
+      if (!files.selfie) e.selfie = 'Selfie obrigatória'
+      if (!files.proof_of_address) e.proof_of_address = 'Comprovante obrigatório'
     }
     if (step === 5) {
       if (!form.termsAccepted) e.termsAccepted = 'Você deve aceitar os termos para continuar'
@@ -164,9 +162,8 @@ export default function TechnicianRegister() {
     try {
       const fd = new FormData()
       fd.append('name', form.name.trim())
-      fd.append('cpf', form.cpf.replace(/\D/g, ''))
-      fd.append('email', form.email.toLowerCase().trim())
       fd.append('phone', form.phone.replace(/\D/g, ''))
+      fd.append('email', form.email.toLowerCase().trim())
       fd.append('password', form.password)
       fd.append('zip_code', form.zip_code.replace(/\D/g, ''))
       fd.append('street', form.street.trim())
@@ -175,9 +172,7 @@ export default function TechnicianRegister() {
       fd.append('neighborhood', form.neighborhood.trim())
       fd.append('city', form.city.trim())
       fd.append('state', form.state.toUpperCase().trim())
-      fd.append('ref_name', form.ref_name.trim())
-      fd.append('ref_contact', form.ref_contact.trim())
-      fd.append('ref_type', form.ref_type)
+      fd.append('cpf', form.cpf.replace(/\D/g, ''))
       fd.append('selfie', files.selfie)
       fd.append('proof_of_address', files.proof_of_address)
 
@@ -205,7 +200,7 @@ export default function TechnicianRegister() {
 
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-800">Dados Pessoais</h2>
+              <h2 className="text-lg font-semibold text-gray-800">Dados de Acesso</h2>
 
               <InputField label="Nome completo" required error={errors.name}>
                 <input
@@ -216,12 +211,12 @@ export default function TechnicianRegister() {
                 />
               </InputField>
 
-              <InputField label="CPF" required error={errors.cpf}>
+              <InputField label="WhatsApp" required error={errors.phone}>
                 <input
-                  className={inputClass(errors.cpf)}
-                  placeholder="000.000.000-00"
-                  value={maskCPF(form.cpf)}
-                  onChange={(e) => set('cpf', e.target.value)}
+                  className={inputClass(errors.phone)}
+                  placeholder="(31) 99999-9999"
+                  value={maskPhone(form.phone)}
+                  onChange={(e) => set('phone', e.target.value)}
                 />
               </InputField>
 
@@ -232,15 +227,6 @@ export default function TechnicianRegister() {
                   placeholder="seu@email.com"
                   value={form.email}
                   onChange={(e) => set('email', e.target.value)}
-                />
-              </InputField>
-
-              <InputField label="WhatsApp" required error={errors.phone}>
-                <input
-                  className={inputClass(errors.phone)}
-                  placeholder="(31) 99999-9999"
-                  value={maskPhone(form.phone)}
-                  onChange={(e) => set('phone', e.target.value)}
                 />
               </InputField>
 
@@ -322,6 +308,29 @@ export default function TechnicianRegister() {
           )}
 
           {step === 3 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold text-gray-800">CPF</h2>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 leading-relaxed">
+                <p className="font-semibold mb-1">Por que pedimos seu CPF?</p>
+                <p>
+                  Usamos o CPF <strong>apenas para verificar sua identidade</strong> durante a análise do cadastro.
+                  Ele nunca é exibido para clientes nem compartilhado com terceiros.
+                </p>
+              </div>
+
+              <InputField label="CPF" required error={errors.cpf}>
+                <input
+                  className={inputClass(errors.cpf)}
+                  placeholder="000.000.000-00"
+                  value={maskCPF(form.cpf)}
+                  onChange={(e) => set('cpf', e.target.value)}
+                />
+              </InputField>
+            </div>
+          )}
+
+          {step === 4 && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold text-gray-800">Documentos</h2>
               <p className="text-sm text-gray-500">
@@ -345,48 +354,6 @@ export default function TechnicianRegister() {
                 required
               />
               {errors.proof_of_address && <p className="text-xs text-red-600">{errors.proof_of_address}</p>}
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-800">Referência Comercial</h2>
-              <p className="text-sm text-gray-500">
-                Informe um fornecedor ou cliente antigo que possa confirmar sua atuação como técnico.
-              </p>
-
-              <InputField label="Tipo de referência" required>
-                <select
-                  className={inputClass()}
-                  value={form.ref_type}
-                  onChange={(e) => set('ref_type', e.target.value)}
-                >
-                  <option value="supplier">Fornecedor de peças</option>
-                  <option value="client">Cliente antigo</option>
-                </select>
-              </InputField>
-
-              <InputField label="Nome" required error={errors.ref_name}>
-                <input
-                  className={inputClass(errors.ref_name)}
-                  placeholder="Nome do fornecedor ou cliente"
-                  value={form.ref_name}
-                  onChange={(e) => set('ref_name', e.target.value)}
-                />
-              </InputField>
-
-              <InputField label="Telefone ou e-mail" required error={errors.ref_contact}>
-                <input
-                  className={inputClass(errors.ref_contact)}
-                  placeholder="Contato para verificação"
-                  value={form.ref_contact}
-                  onChange={(e) => set('ref_contact', e.target.value)}
-                />
-              </InputField>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
-                A UaiFix pode entrar em contato com esta referência para confirmar sua experiência.
-              </div>
             </div>
           )}
 

@@ -29,7 +29,7 @@ class TechnicianDB(BaseModel):
     address: Address
     selfie_filename: Optional[str] = None
     proof_of_address_filename: Optional[str] = None
-    commercial_reference: CommercialReference
+    commercial_reference: Optional[CommercialReference] = None
     terms_accepted_at: datetime
     terms_ip: str
     service_radius_km: int = 20
