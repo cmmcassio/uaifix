@@ -1,0 +1,47 @@
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+
+class Address(BaseModel):
+    zip_code: str
+    street: str
+    number: str
+    complement: Optional[str] = None
+    neighborhood: str
+    city: str
+    state: str
+
+
+class CommercialReference(BaseModel):
+    name: str
+    contact: str
+    type: str  # "supplier" | "client"
+
+
+class TechnicianDB(BaseModel):
+    name: str
+    cpf: str
+    email: str
+    phone: str
+    password_hash: str
+    address: Address
+    selfie_filename: Optional[str] = None
+    proof_of_address_filename: Optional[str] = None
+    commercial_reference: CommercialReference
+    terms_accepted_at: datetime
+    terms_ip: str
+    service_radius_km: int = 20
+    status: str = "pending"  # pending | approved | rejected
+    rejection_reason: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    rejected_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None
+    trial_started_at: Optional[datetime] = None
+    trial_calls_accepted: int = 0
+    daily_calls_count: int = 0
+    warnings_count: int = 0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    role: str = "technician"
