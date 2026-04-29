@@ -1,12 +1,19 @@
-import re
-from datetime import date, datetime, time as time_type
+from datetime import date, datetime, time as time_type, timedelta
 from typing import List
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.database import get_db
+from app.dispatch import (
+    _auto_rate_completed_calls,
+    _is_eligible,
+    _assign_offer,
+    _update_tech_avg_rating,
+    trigger_dispatch_for_call,
+)
 from app.models.call import ServiceCallDB
+from app.models.rating import RatingDB
 from app.models.technician import Address
 from app.routes.auth import get_current_client, get_current_technician
 from app.schemas.call import (
@@ -15,16 +22,10 @@ from app.schemas.call import (
     CallSummaryResponse,
     CreateCallRequest,
 )
+from app.schemas.rating import RateCallRequest
 
 router = APIRouter(prefix="/calls", tags=["calls"])
-
 stats_router = APIRouter(prefix="/stats", tags=["stats"])
-
-
-@stats_router.get("/technicians")
-async def technician_stats(db=Depends(get_db)):
-    count = await db.technicians.count_documents({"status": "approved"})
-    return {"approved_technicians": count}
 
 
 def _summary(c: dict) -> CallSummaryResponse:
@@ -40,6 +41,7 @@ def _summary(c: dict) -> CallSummaryResponse:
         city=addr.get("city", ""),
         technician_name=c.get("technician_name"),
         accepted_at=c.get("accepted_at"),
+        offer_expires_at=c.get("offer_expires_at"),
         created_at=c["created_at"],
     )
 
@@ -63,6 +65,7 @@ def _detail(c: dict) -> CallDetailResponse:
         technician_name=c.get("technician_name"),
         accepted_at=c.get("accepted_at"),
         completed_at=c.get("completed_at"),
+        rated_by_client=c.get("rated_by_client", False),
         created_at=c["created_at"],
     )
 
@@ -81,6 +84,18 @@ async def create_call(
         raise HTTPException(400, "Informe a marca do aparelho.")
     if not body.symptom.strip():
         raise HTTPException(400, "Informe o problema do aparelho.")
+
+    # Auto-avalia chamados concluídos há mais de 24h antes de verificar pendências
+    await _auto_rate_completed_calls(db, datetime.utcnow())
+
+    # Bloqueia se há chamado concluído sem avaliação (< 24h)
+    pending_rating = await db.calls.find_one({
+        "client_id": str(client["_id"]),
+        "status": "completed",
+        "rated_by_client": {"$ne": True},
+    })
+    if pending_rating:
+        raise HTTPException(400, "Avalie o último atendimento antes de abrir um novo chamado.")
 
     existing = await db.calls.find_one({
         "client_id": str(client["_id"]),
@@ -105,7 +120,11 @@ async def create_call(
     ).model_dump()
 
     result = await db.calls.insert_one(doc)
-    return {"id": str(result.inserted_id), "message": "Chamado aberto! Buscando técnico na sua região."}
+    call_id = str(result.inserted_id)
+
+    await trigger_dispatch_for_call(db, call_id)
+
+    return {"id": call_id, "message": "Chamado aberto! Buscando técnico na sua região."}
 
 
 @router.get("/my", response_model=List[CallDetailResponse])
@@ -143,6 +162,49 @@ async def cancel_call(
     return {"message": "Chamado cancelado."}
 
 
+@router.post("/{call_id}/rate")
+async def rate_call(
+    call_id: str,
+    body: RateCallRequest,
+    client=Depends(get_current_client),
+    db=Depends(get_db),
+):
+    try:
+        oid = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido.")
+
+    call = await db.calls.find_one({
+        "_id": oid,
+        "client_id": str(client["_id"]),
+        "status": "completed",
+    })
+    if not call:
+        raise HTTPException(404, "Chamado concluído não encontrado.")
+    if call.get("rated_by_client"):
+        raise HTTPException(400, "Este chamado já foi avaliado.")
+    if not call.get("technician_id"):
+        raise HTTPException(400, "Chamado sem técnico para avaliar.")
+
+    rating_doc = RatingDB(
+        call_id=str(call["_id"]),
+        client_id=str(client["_id"]),
+        technician_id=call["technician_id"],
+        stars=body.stars,
+        comment=body.comment.strip() if body.comment else None,
+        is_auto=False,
+    ).model_dump()
+
+    await db.ratings.insert_one(rating_doc)
+    await db.calls.update_one(
+        {"_id": oid},
+        {"$set": {"rated_by_client": True, "updated_at": datetime.utcnow()}},
+    )
+    await _update_tech_avg_rating(db, call["technician_id"])
+
+    return {"message": "Avaliação enviada. Obrigado!"}
+
+
 # ── Técnico ───────────────────────────────────────────────────────────────────
 
 @router.get("/available", response_model=List[CallSummaryResponse])
@@ -153,15 +215,13 @@ async def available_calls(
     if technician.get("status") != "approved":
         raise HTTPException(403, "Apenas técnicos aprovados podem ver chamados disponíveis.")
 
-    tech_city = (technician.get("address") or {}).get("city", "")
-    if not tech_city:
-        raise HTTPException(400, "Técnico sem cidade cadastrada.")
-
-    city_pattern = re.compile(f"^{re.escape(tech_city)}$", re.IGNORECASE)
-    cursor = db.calls.find(
-        {"status": "open", "address.city": {"$regex": city_pattern}}
-    ).sort("created_at", -1).limit(50)
-    calls = await cursor.to_list(length=50)
+    now = datetime.utcnow()
+    cursor = db.calls.find({
+        "status": "open",
+        "offered_to": str(technician["_id"]),
+        "offer_expires_at": {"$gt": now},
+    }).sort("created_at", -1)
+    calls = await cursor.to_list(length=10)
     return [_summary(c) for c in calls]
 
 
@@ -190,6 +250,9 @@ async def accept_call(
     if technician.get("status") != "approved":
         raise HTTPException(403, "Apenas técnicos aprovados podem aceitar chamados.")
 
+    if not _is_eligible(technician, datetime.utcnow()):
+        raise HTTPException(403, "Seu período de trial expirou. Assine para continuar recebendo chamados.")
+
     today_start = datetime.combine(date.today(), time_type.min)
     calls_today = await db.calls.count_documents({
         "technician_id": str(technician["_id"]),
@@ -203,18 +266,141 @@ async def accept_call(
     except Exception:
         raise HTTPException(400, "ID inválido.")
 
-    # Atualização atômica: só aceita se ainda estiver "open"
+    now = datetime.utcnow()
     result = await db.calls.update_one(
-        {"_id": oid, "status": "open"},
+        {
+            "_id": oid,
+            "status": "open",
+            "offered_to": str(technician["_id"]),
+            "offer_expires_at": {"$gt": now},
+        },
         {"$set": {
             "status": "accepted",
             "technician_id": str(technician["_id"]),
             "technician_name": technician["name"],
-            "accepted_at": datetime.utcnow(),
+            "accepted_at": now,
+            "updated_at": now,
+        }},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(400, "Chamado não está mais disponível ou oferta expirou.")
+
+    await db.technicians.update_one(
+        {"_id": technician["_id"]},
+        {"$inc": {"trial_calls_accepted": 1}},
+    )
+
+    return {"message": "Chamado aceito! Entre em contato com o cliente para agendar o atendimento."}
+
+
+@router.post("/{call_id}/complete")
+async def complete_call(
+    call_id: str,
+    technician=Depends(get_current_technician),
+    db=Depends(get_db),
+):
+    try:
+        oid = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido.")
+
+    result = await db.calls.update_one(
+        {
+            "_id": oid,
+            "technician_id": str(technician["_id"]),
+            "status": {"$in": ["accepted", "in_progress"]},
+        },
+        {"$set": {
+            "status": "completed",
+            "completed_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }},
     )
     if result.matched_count == 0:
-        raise HTTPException(400, "Chamado não está mais disponível.")
+        raise HTTPException(400, "Chamado não encontrado ou não pode ser concluído.")
 
-    return {"message": "Chamado aceito! Entre em contato com o cliente para agendar o atendimento."}
+    return {"message": "Chamado concluído com sucesso!"}
+
+
+@router.post("/{call_id}/decline")
+async def decline_call(
+    call_id: str,
+    technician=Depends(get_current_technician),
+    db=Depends(get_db),
+):
+    try:
+        oid = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido.")
+
+    now = datetime.utcnow()
+    result = await db.calls.update_one(
+        {
+            "_id": oid,
+            "status": "open",
+            "offered_to": str(technician["_id"]),
+        },
+        {
+            "$push": {"declined_by": str(technician["_id"])},
+            "$set": {
+                "offered_to": None,
+                "offer_expires_at": None,
+                "updated_at": now,
+            },
+        },
+    )
+    if result.matched_count == 0:
+        raise HTTPException(400, "Oferta não encontrada ou já expirada.")
+
+    # Despacha imediatamente para o próximo técnico
+    call = await db.calls.find_one({"_id": oid, "status": "open"})
+    if call:
+        await _assign_offer(db, call, now)
+
+    return {"message": "Chamado recusado."}
+
+
+# ── Stats (público) ───────────────────────────────────────────────────────────
+
+@stats_router.get("/technicians")
+async def technician_stats(db=Depends(get_db)):
+    count = await db.technicians.count_documents({"status": "approved"})
+    return {"approved_technicians": count}
+
+
+@stats_router.get("/pricing")
+async def pricing_stats(
+    appliance: str = Query(None),
+    db=Depends(get_db),
+):
+    techs = await db.technicians.find(
+        {"status": "approved", "pricing": {"$ne": None}}
+    ).to_list(length=500)
+
+    result = {"count": len(techs), "diagnostic": None, "repair": None}
+
+    diag_values = [
+        (t["pricing"]["diagnostic_fee"]["min"], t["pricing"]["diagnostic_fee"]["max"])
+        for t in techs
+        if (t.get("pricing") or {}).get("diagnostic_fee")
+    ]
+    if diag_values:
+        result["diagnostic"] = {
+            "min": min(v[0] for v in diag_values),
+            "max": max(v[1] for v in diag_values),
+        }
+
+    if appliance in ("refrigerator", "washing_machine"):
+        key = f"repair_{appliance}"
+        repair_values = [
+            (t["pricing"][key]["min"], t["pricing"][key]["max"])
+            for t in techs
+            if (t.get("pricing") or {}).get(key)
+        ]
+        if repair_values:
+            result["repair"] = {
+                "min": min(v[0] for v in repair_values),
+                "max": max(v[1] for v in repair_values),
+            }
+
+    return result

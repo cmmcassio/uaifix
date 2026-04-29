@@ -20,6 +20,17 @@ class CommercialReference(BaseModel):
     type: str  # "supplier" | "client"
 
 
+class PricingRange(BaseModel):
+    min: int
+    max: int
+
+
+class TechnicianPricing(BaseModel):
+    diagnostic_fee: Optional[PricingRange] = None
+    repair_refrigerator: Optional[PricingRange] = None
+    repair_washing_machine: Optional[PricingRange] = None
+
+
 class TechnicianDB(BaseModel):
     name: str
     cpf: str
@@ -42,6 +53,11 @@ class TechnicianDB(BaseModel):
     trial_calls_accepted: int = 0
     daily_calls_count: int = 0
     warnings_count: int = 0
+    pricing: Optional[TechnicianPricing] = None
+    last_offered_at: Optional[datetime] = None
+    avg_rating: Optional[float] = None
+    ratings_count: int = 0
+    subscription_expires_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     role: str = "technician"

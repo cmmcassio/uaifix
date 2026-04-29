@@ -11,6 +11,7 @@ import TechnicianRegister from './pages/technician/Register'
 import TechnicianLogin from './pages/technician/Login'
 import PendingApproval from './pages/technician/PendingApproval'
 import TechnicianDashboard from './pages/technician/Dashboard'
+import TechnicianPricing from './pages/technician/Pricing'
 
 import NewCall from './pages/client/NewCall'
 
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/tecnico/login" element={<TechnicianLogin />} />
           <Route path="/tecnico/aguardando" element={<PendingApproval />} />
           <Route path="/tecnico/dashboard" element={<TechnicianDashboard />} />
+          <Route path="/tecnico/precos" element={<TechnicianPricing />} />
 
           {/* Admin */}
           <Route path="/admin/login" element={<AdminLogin />} />

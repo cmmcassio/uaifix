@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../api/client'
@@ -34,9 +34,37 @@ function fmtPhone(p) {
   return p
 }
 
-function AvailableCard({ call, onAccept, accepting }) {
+function useCountdown(expiresAt, onExpired) {
+  const [secsLeft, setSecsLeft] = useState(() =>
+    expiresAt ? Math.max(0, Math.floor((new Date(expiresAt) - Date.now()) / 1000)) : null
+  )
+  const expiredFired = useRef(false)
+
+  useEffect(() => {
+    if (!expiresAt) return
+    expiredFired.current = false
+    const interval = setInterval(() => {
+      const s = Math.max(0, Math.floor((new Date(expiresAt) - Date.now()) / 1000))
+      setSecsLeft(s)
+      if (s === 0 && !expiredFired.current) {
+        expiredFired.current = true
+        setTimeout(onExpired, 1500)
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [expiresAt, onExpired])
+
+  return secsLeft
+}
+
+function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpired }) {
+  const secsLeft = useCountdown(call.offer_expires_at, onExpired)
+  const urgent = secsLeft !== null && secsLeft <= 30
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+    <div className={`bg-white rounded-2xl border shadow-sm p-4 space-y-3 transition ${
+      urgent ? 'border-red-300' : 'border-gray-100'
+    }`}>
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 bg-accent-500/10 text-accent-600 rounded-xl flex items-center justify-center shrink-0">
           {APPLIANCE_ICON[call.appliance_type]}
@@ -52,28 +80,56 @@ function AvailableCard({ call, onAccept, accepting }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-1 text-xs text-gray-400">
-        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-        </svg>
-        {call.neighborhood}, {call.city} · {timeAgo(call.created_at)}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1 text-xs text-gray-400">
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+          </svg>
+          {call.neighborhood}, {call.city} · {timeAgo(call.created_at)}
+        </div>
+
+        {secsLeft !== null && (
+          <span className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded-full ${
+            urgent ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-orange-50 text-orange-600'
+          }`}>
+            {secsLeft}s
+          </span>
+        )}
       </div>
 
-      <button
-        onClick={() => onAccept(call.id)}
-        disabled={accepting === call.id}
-        className="w-full bg-accent-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-accent-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {accepting === call.id ? (
-          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-        ) : 'Aceitar chamado'}
-      </button>
+      {secsLeft !== null && (
+        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-1000 ${urgent ? 'bg-red-400' : 'bg-accent-500'}`}
+            style={{ width: `${Math.min(100, (secsLeft / 120) * 100)}%` }}
+          />
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => onDecline(call.id)}
+          disabled={declining === call.id || accepting === call.id}
+          className="flex-1 border border-gray-200 text-gray-500 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition disabled:opacity-40"
+        >
+          {declining === call.id ? '...' : 'Recusar'}
+        </button>
+        <button
+          onClick={() => onAccept(call.id)}
+          disabled={accepting === call.id || declining === call.id}
+          className="flex-[2] bg-accent-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-accent-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {accepting === call.id ? (
+            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+          ) : 'Aceitar chamado'}
+        </button>
+      </div>
     </div>
   )
 }
 
-function ActiveJobCard({ call }) {
+function ActiveJobCard({ call, onComplete, completing }) {
   return (
     <div className="bg-white rounded-2xl border border-green-200 shadow-sm p-4 space-y-3">
       <div className="flex items-start gap-3">
@@ -112,6 +168,16 @@ function ActiveJobCard({ call }) {
           {call.street}, {call.number}{call.complement ? ` — ${call.complement}` : ''} · {call.neighborhood}, {call.city}
         </p>
       </div>
+
+      <button
+        onClick={() => onComplete(call.id)}
+        disabled={completing === call.id}
+        className="w-full border border-green-300 text-green-700 rounded-xl py-2.5 text-sm font-semibold hover:bg-green-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {completing === call.id ? (
+          <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full" />
+        ) : 'Marcar como concluído'}
+      </button>
     </div>
   )
 }
@@ -124,14 +190,17 @@ export default function TechnicianDashboard() {
   const [myJobs, setMyJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [accepting, setAccepting] = useState(null)
+  const [declining, setDeclining] = useState(null)
+  const [completing, setCompleting] = useState(null)
   const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
 
   useEffect(() => {
     if (!user || user.role !== 'technician') navigate('/tecnico/login')
   }, [user, navigate])
 
-  const fetchAll = useCallback(async () => {
-    setLoading(true)
+  const fetchAll = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     setError('')
     try {
       const [avRes, jobRes] = await Promise.all([
@@ -145,7 +214,7 @@ export default function TechnicianDashboard() {
         setError('Erro ao carregar chamados. Verifique sua conexão.')
       }
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
@@ -153,17 +222,56 @@ export default function TechnicianDashboard() {
     if (user) fetchAll()
   }, [user, fetchAll])
 
+  // Auto-refresh a cada 15 segundos (silencioso)
+  useEffect(() => {
+    if (!user) return
+    const interval = setInterval(() => fetchAll(true), 15000)
+    return () => clearInterval(interval)
+  }, [user, fetchAll])
+
   const accept = async (callId) => {
     setAccepting(callId)
     setError('')
     try {
       await api.post(`/calls/${callId}/accept`)
+      setToast('Chamado aceito! Entre em contato com o cliente.')
+      setTimeout(() => setToast(''), 4000)
       await fetchAll()
       setTab('jobs')
     } catch (err) {
       setError(err.response?.data?.detail || 'Erro ao aceitar chamado.')
     } finally {
       setAccepting(null)
+    }
+  }
+
+  const decline = async (callId) => {
+    setDeclining(callId)
+    setError('')
+    try {
+      await api.post(`/calls/${callId}/decline`)
+      await fetchAll(true)
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao recusar chamado.')
+    } finally {
+      setDeclining(null)
+    }
+  }
+
+  const complete = async (callId) => {
+    if (!window.confirm('Confirmar conclusão do atendimento?')) return
+    setCompleting(callId)
+    setError('')
+    try {
+      await api.post(`/calls/${callId}/complete`)
+      setToast('Atendimento concluído!')
+      setTimeout(() => setToast(''), 4000)
+      await fetchAll()
+      setTab('available')
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao concluir chamado.')
+    } finally {
+      setCompleting(null)
     }
   }
 
@@ -180,7 +288,13 @@ export default function TechnicianDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchAll}
+            onClick={() => navigate('/tecnico/precos')}
+            className="text-xs text-gray-500 hover:text-primary-700 transition border border-gray-200 px-2.5 py-1.5 rounded-lg hover:border-primary-300"
+          >
+            Meus preços
+          </button>
+          <button
+            onClick={() => fetchAll()}
             disabled={loading}
             className="text-gray-400 hover:text-gray-600 transition disabled:opacity-40"
             title="Atualizar"
@@ -196,7 +310,10 @@ export default function TechnicianDashboard() {
         </div>
       </header>
 
-      {/* Tabs */}
+      {toast && (
+        <div className="bg-green-600 text-white text-sm text-center py-2.5 font-medium">{toast}</div>
+      )}
+
       <div className="bg-white border-b border-gray-100 px-4">
         <div className="max-w-2xl mx-auto flex">
           {[
@@ -246,11 +363,19 @@ export default function TechnicianDashboard() {
                 </svg>
               </div>
               <p className="text-sm font-medium text-gray-600">Nenhum chamado disponível</p>
-              <p className="text-xs text-gray-400">Novos chamados da sua região aparecem aqui.</p>
+              <p className="text-xs text-gray-400">Atualiza a cada 15 segundos automaticamente.</p>
             </div>
           ) : (
             available.map((call) => (
-              <AvailableCard key={call.id} call={call} onAccept={accept} accepting={accepting} />
+              <AvailableCard
+                key={call.id}
+                call={call}
+                onAccept={accept}
+                onDecline={decline}
+                accepting={accepting}
+                declining={declining}
+                onExpired={() => fetchAll(true)}
+              />
             ))
           )
         ) : (
@@ -266,7 +391,14 @@ export default function TechnicianDashboard() {
               <p className="text-xs text-gray-400">Aceite um chamado disponível para começar.</p>
             </div>
           ) : (
-            myJobs.map((call) => <ActiveJobCard key={call.id} call={call} />)
+            myJobs.map((call) => (
+              <ActiveJobCard
+                key={call.id}
+                call={call}
+                onComplete={complete}
+                completing={completing}
+              />
+            ))
           )
         )}
       </main>

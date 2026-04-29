@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +18,10 @@ class ServiceCallDB(BaseModel):
     status: str = "open"       # open | accepted | in_progress | completed | cancelled
     technician_id: Optional[str] = None
     technician_name: Optional[str] = None
+    offered_to: Optional[str] = None
+    offer_expires_at: Optional[datetime] = None
+    declined_by: List[str] = Field(default_factory=list)
+    rated_by_client: bool = False
     accepted_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None

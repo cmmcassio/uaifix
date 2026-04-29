@@ -25,6 +25,7 @@ class CallSummaryResponse(BaseModel):
     city: str
     technician_name: Optional[str]
     accepted_at: Optional[datetime]
+    offer_expires_at: Optional[datetime]
     created_at: datetime
 
 
@@ -46,4 +47,5 @@ class CallDetailResponse(BaseModel):
     technician_name: Optional[str]
     accepted_at: Optional[datetime]
     completed_at: Optional[datetime]
+    rated_by_client: bool
     created_at: datetime

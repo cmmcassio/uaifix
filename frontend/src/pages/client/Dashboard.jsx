@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../api/client'
+import StarRating from '../../components/StarRating'
 
 const APPLIANCE_LABEL = { refrigerator: 'Geladeira', washing_machine: 'Máquina de lavar' }
 
@@ -25,10 +26,16 @@ export default function ClientDashboard() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
-  const [activeCall, setActiveCall] = useState(null)
+  const [calls, setCalls] = useState([])
   const [loadingCall, setLoadingCall] = useState(true)
   const [cancelling, setCancelling] = useState(false)
   const [toast, setToast] = useState(location.state?.callCreated ? 'Chamado aberto! Buscando técnico.' : null)
+
+  // Rating state
+  const [ratingStars, setRatingStars] = useState(0)
+  const [ratingComment, setRatingComment] = useState('')
+  const [submittingRating, setSubmittingRating] = useState(false)
+  const [ratingError, setRatingError] = useState('')
 
   useEffect(() => {
     if (!user || user.role !== 'client') navigate('/cliente/login')
@@ -41,28 +48,56 @@ export default function ClientDashboard() {
     }
   }, [toast])
 
-  useEffect(() => {
+  const fetchCalls = async () => {
     if (!user) return
-    api.get('/calls/my')
-      .then(({ data }) => {
-        const open = data.find((c) => ['open', 'accepted', 'in_progress'].includes(c.status))
-        setActiveCall(open || null)
-      })
-      .catch(() => {})
-      .finally(() => setLoadingCall(false))
+    try {
+      const { data } = await api.get('/calls/my')
+      setCalls(data)
+    } catch {}
+    finally { setLoadingCall(false) }
+  }
+
+  useEffect(() => {
+    fetchCalls()
   }, [user])
+
+  const activeCall = calls.find((c) => ['open', 'accepted', 'in_progress'].includes(c.status))
+  const pendingRating = !activeCall && calls.find((c) => c.status === 'completed' && !c.rated_by_client)
 
   const cancel = async () => {
     if (!activeCall || !window.confirm('Cancelar o chamado?')) return
     setCancelling(true)
     try {
       await api.post(`/calls/${activeCall.id}/cancel`)
-      setActiveCall(null)
       setToast('Chamado cancelado.')
+      fetchCalls()
     } catch (err) {
       alert(err.response?.data?.detail || 'Erro ao cancelar.')
     } finally {
       setCancelling(false)
+    }
+  }
+
+  const submitRating = async () => {
+    if (ratingStars === 0) {
+      setRatingError('Selecione uma nota de 1 a 5 estrelas.')
+      return
+    }
+    setSubmittingRating(true)
+    setRatingError('')
+    try {
+      await api.post(`/calls/${pendingRating.id}/rate`, {
+        stars: ratingStars,
+        comment: ratingComment.trim() || undefined,
+      })
+      setToast('Avaliação enviada!')
+      setRatingStars(0)
+      setRatingComment('')
+      fetchCalls()
+    } catch (err) {
+      setRatingError(err.response?.data?.detail || 'Erro ao enviar avaliação.')
+    } finally {
+      setSubmittingRating(false)
     }
   }
 
@@ -94,6 +129,54 @@ export default function ClientDashboard() {
           <div className="flex justify-center py-8">
             <div className="animate-spin h-6 w-6 border-2 border-primary-600 border-t-transparent rounded-full" />
           </div>
+
+        ) : pendingRating ? (
+          /* Avaliação pendente */
+          <div className="bg-white rounded-2xl border border-yellow-200 shadow-sm p-5 space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-yellow-700 uppercase tracking-wide mb-1">Avalie o atendimento</p>
+              <h2 className="text-base font-bold text-gray-800">
+                {APPLIANCE_LABEL[pendingRating.appliance_type]} {pendingRating.brand}
+              </h2>
+              <p className="text-sm text-gray-500 mt-0.5">{pendingRating.symptom}</p>
+              {pendingRating.technician_name && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Técnico: <span className="font-medium text-gray-700">{pendingRating.technician_name}</span>
+                </p>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Avalie para poder abrir um novo chamado. Se não avaliar em 24h, uma nota neutra será registrada automaticamente.
+            </p>
+
+            <div className="space-y-3">
+              <StarRating value={ratingStars} onChange={setRatingStars} size="lg" />
+
+              <textarea
+                rows={2}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                placeholder="Comentário opcional..."
+                value={ratingComment}
+                onChange={(e) => setRatingComment(e.target.value)}
+              />
+
+              {ratingError && (
+                <p className="text-xs text-red-600">{ratingError}</p>
+              )}
+
+              <button
+                onClick={submitRating}
+                disabled={submittingRating}
+                className="w-full bg-primary-700 text-white rounded-xl py-3 text-sm font-semibold hover:bg-primary-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {submittingRating ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                ) : 'Enviar avaliação'}
+              </button>
+            </div>
+          </div>
+
         ) : activeCall ? (
           /* Chamado em aberto */
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
@@ -137,8 +220,9 @@ export default function ClientDashboard() {
               </button>
             )}
           </div>
+
         ) : (
-          /* Sem chamado aberto */
+          /* Sem chamado ativo */
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center space-y-4">
             <div className="w-14 h-14 bg-primary-700/10 rounded-full flex items-center justify-center mx-auto">
               <svg className="w-7 h-7 text-primary-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,7 +244,7 @@ export default function ClientDashboard() {
         )}
 
         {/* Como funciona */}
-        {!activeCall && (
+        {!activeCall && !pendingRating && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Como funciona</h3>
             <ol className="space-y-3">

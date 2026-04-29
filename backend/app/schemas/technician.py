@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.technician import Address, CommercialReference
 
@@ -50,3 +50,20 @@ class LoginResponse(BaseModel):
 
 class AdminRejectRequest(BaseModel):
     reason: str
+
+
+class PricingRangeInput(BaseModel):
+    min: int = Field(..., ge=0, le=99999)
+    max: int = Field(..., ge=0, le=99999)
+
+
+class UpdatePricingRequest(BaseModel):
+    diagnostic_fee: Optional[PricingRangeInput] = None
+    repair_refrigerator: Optional[PricingRangeInput] = None
+    repair_washing_machine: Optional[PricingRangeInput] = None
+
+
+class PricingResponse(BaseModel):
+    diagnostic_fee: Optional[PricingRangeInput] = None
+    repair_refrigerator: Optional[PricingRangeInput] = None
+    repair_washing_machine: Optional[PricingRangeInput] = None

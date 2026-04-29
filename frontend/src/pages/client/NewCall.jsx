@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/client'
 
@@ -27,29 +27,20 @@ const APPLIANCES = [
 
 const SYMPTOMS = {
   refrigerator: [
-    'Não está gelando',
-    'Fazendo barulho',
-    'Vazando água',
-    'Não liga',
-    'Porta não fecha bem',
-    'Gela demais / formando gelo em excesso',
-    'Compressor não para',
-    'Outro',
+    'Não está gelando', 'Fazendo barulho', 'Vazando água', 'Não liga',
+    'Porta não fecha bem', 'Gela demais / formando gelo em excesso',
+    'Compressor não para', 'Outro',
   ],
   washing_machine: [
-    'Não centrifuga',
-    'Não liga',
-    'Vazando água',
-    'Fazendo barulho estranho',
-    'Não drena a água',
-    'Para no meio do ciclo',
-    'Não agita',
-    'Vibração excessiva',
-    'Outro',
+    'Não centrifuga', 'Não liga', 'Vazando água', 'Fazendo barulho estranho',
+    'Não drena a água', 'Para no meio do ciclo', 'Não agita',
+    'Vibração excessiva', 'Outro',
   ],
 }
 
 const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition'
+
+function fmt(v) { return `R$ ${v}` }
 
 export default function NewCall() {
   const navigate = useNavigate()
@@ -57,6 +48,18 @@ export default function NewCall() {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [globalError, setGlobalError] = useState('')
+  const [pricing, setPricing] = useState(null)
+
+  // Busca faixa de preço quando o tipo de aparelho é selecionado
+  useEffect(() => {
+    if (!form.appliance_type) { setPricing(null); return }
+    api.get(`/stats/pricing?appliance=${form.appliance_type}`)
+      .then(({ data }) => {
+        if (data.diagnostic || data.repair) setPricing(data)
+        else setPricing(null)
+      })
+      .catch(() => setPricing(null))
+  }, [form.appliance_type])
 
   const set = (field, value) => {
     setForm((prev) => {
@@ -141,6 +144,30 @@ export default function NewCall() {
               <p className="mt-1.5 text-xs text-red-600">{errors.appliance_type}</p>
             )}
           </div>
+
+          {/* Faixa de preços estimados */}
+          {pricing && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 space-y-1.5">
+              <p className="text-xs font-semibold text-blue-700 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                </svg>
+                Valores estimados pelos técnicos da plataforma
+              </p>
+              {pricing.diagnostic && (
+                <p className="text-xs text-blue-800">
+                  Visita diagnóstico: <span className="font-semibold">{fmt(pricing.diagnostic.min)} – {fmt(pricing.diagnostic.max)}</span>
+                </p>
+              )}
+              {pricing.repair && (
+                <p className="text-xs text-blue-800">
+                  Conserto: <span className="font-semibold">{fmt(pricing.repair.min)} – {fmt(pricing.repair.max)}</span>
+                </p>
+              )}
+              <p className="text-xs text-blue-600">O valor final é combinado diretamente com o técnico.</p>
+            </div>
+          )}
 
           {/* Marca */}
           <div>

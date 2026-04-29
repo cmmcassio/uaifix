@@ -14,7 +14,11 @@ async def connect_db():
     await _db.technicians.create_index("email", unique=True)
     await _db.clients.create_index("email", unique=True)
     await _db.calls.create_index("client_id")
+    await _db.calls.create_index("offered_to")
     await _db.calls.create_index([("status", 1), ("address.city", 1)])
+    await _db.calls.create_index([("status", 1), ("offered_to", 1)])
+    await _db.ratings.create_index("call_id")
+    await _db.ratings.create_index("technician_id")
 
 
 async def close_db():
