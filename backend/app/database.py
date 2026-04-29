@@ -13,6 +13,8 @@ async def connect_db():
     await _db.technicians.create_index("cpf", unique=True)
     await _db.technicians.create_index("email", unique=True)
     await _db.clients.create_index("email", unique=True)
+    await _db.calls.create_index("client_id")
+    await _db.calls.create_index([("status", 1), ("address.city", 1)])
 
 
 async def close_db():

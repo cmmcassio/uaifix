@@ -10,6 +10,9 @@ import ClientDashboard from './pages/client/Dashboard'
 import TechnicianRegister from './pages/technician/Register'
 import TechnicianLogin from './pages/technician/Login'
 import PendingApproval from './pages/technician/PendingApproval'
+import TechnicianDashboard from './pages/technician/Dashboard'
+
+import NewCall from './pages/client/NewCall'
 
 import AdminLogin from './pages/admin/Login'
 import TechnicianQueue from './pages/admin/TechnicianQueue'
@@ -26,12 +29,13 @@ export default function App() {
           <Route path="/cliente/cadastro" element={<ClientRegister />} />
           <Route path="/cliente/login" element={<ClientLogin />} />
           <Route path="/cliente/dashboard" element={<ClientDashboard />} />
+          <Route path="/cliente/chamado/novo" element={<NewCall />} />
 
           {/* Técnico */}
           <Route path="/tecnico/cadastro" element={<TechnicianRegister />} />
           <Route path="/tecnico/login" element={<TechnicianLogin />} />
           <Route path="/tecnico/aguardando" element={<PendingApproval />} />
-          <Route path="/tecnico/dashboard" element={<Navigate to="/tecnico/aguardando" replace />} />
+          <Route path="/tecnico/dashboard" element={<TechnicianDashboard />} />
 
           {/* Admin */}
           <Route path="/admin/login" element={<AdminLogin />} />
