@@ -24,7 +24,7 @@ class TechnicianDetailResponse(BaseModel):
     email: str
     phone: str
     address: Address
-    commercial_reference: CommercialReference
+    commercial_reference: Optional[CommercialReference] = None
     selfie_url: Optional[str]
     proof_of_address_url: Optional[str]
     terms_accepted_at: datetime
