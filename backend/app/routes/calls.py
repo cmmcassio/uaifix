@@ -18,6 +18,14 @@ from app.schemas.call import (
 
 router = APIRouter(prefix="/calls", tags=["calls"])
 
+stats_router = APIRouter(prefix="/stats", tags=["stats"])
+
+
+@stats_router.get("/technicians")
+async def technician_stats(db=Depends(get_db)):
+    count = await db.technicians.count_documents({"status": "approved"})
+    return {"approved_technicians": count}
+
 
 def _summary(c: dict) -> CallSummaryResponse:
     addr = c.get("address", {})

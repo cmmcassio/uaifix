@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.database import close_db, connect_db
 from app.routes import admin, auth, calls
+from app.routes.calls import stats_router
 
 
 @asynccontextmanager
@@ -34,6 +35,7 @@ app.mount("/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(calls.router)
+app.include_router(stats_router)
 
 
 @app.get("/health")
