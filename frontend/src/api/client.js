@@ -20,7 +20,10 @@ api.interceptors.response.use(
       const user = JSON.parse(localStorage.getItem('uaifix_user') || 'null')
       localStorage.removeItem('uaifix_token')
       localStorage.removeItem('uaifix_user')
-      window.location.href = user?.role === 'admin' ? '/admin/login' : '/tecnico/login'
+      const dest = user?.role === 'admin' ? '/admin/login'
+                 : user?.role === 'client' ? '/cliente/login'
+                 : '/tecnico/login'
+      window.location.href = dest
     }
     return Promise.reject(error)
   }

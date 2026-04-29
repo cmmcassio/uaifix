@@ -14,7 +14,9 @@ export function AuthProvider({ children }) {
   })
 
   const login = useCallback(async (email, password, role = 'technician') => {
-    const endpoint = role === 'admin' ? '/auth/login/admin' : '/auth/login/technician'
+    const endpoint = role === 'admin' ? '/auth/login/admin'
+                   : role === 'client' ? '/auth/login/client'
+                   : '/auth/login/technician'
     const { data } = await api.post(endpoint, { email, password })
     localStorage.setItem('uaifix_token', data.access_token)
     const userData = { name: data.name, role: data.role, status: data.status }

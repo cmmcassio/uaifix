@@ -12,6 +12,7 @@ async def connect_db():
     _db = _client[settings.db_name]
     await _db.technicians.create_index("cpf", unique=True)
     await _db.technicians.create_index("email", unique=True)
+    await _db.clients.create_index("email", unique=True)
 
 
 async def close_db():
