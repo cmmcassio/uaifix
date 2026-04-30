@@ -62,26 +62,25 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
   const urgent = secsLeft !== null && secsLeft <= 30
 
   return (
-    <div className={`bg-white rounded-2xl border shadow-sm p-4 space-y-3 transition ${
-      urgent ? 'border-red-300' : 'border-gray-100'
-    }`}>
+    <div className={urgent ? 'card-danger p-4 space-y-3' : 'card p-4 space-y-3'}>
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 bg-accent-500/10 text-accent-600 rounded-xl flex items-center justify-center shrink-0">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+             style={{ background: 'rgba(201,168,76,0.1)', color: '#C9A84C' }}>
           {APPLIANCE_ICON[call.appliance_type]}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800">
+          <p className="text-sm font-semibold text-cream">
             {APPLIANCE_LABEL[call.appliance_type]} {call.brand}
           </p>
-          <p className="text-sm text-gray-600 mt-0.5">{call.symptom}</p>
+          <p className="text-sm text-cream/60 mt-0.5">{call.symptom}</p>
           {call.description && (
-            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{call.description}</p>
+            <p className="text-xs text-cream/35 mt-1 line-clamp-2">{call.description}</p>
           )}
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-xs text-gray-400">
+        <div className="flex items-center gap-1 text-xs text-cream/35">
           <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
@@ -90,19 +89,25 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
         </div>
 
         {secsLeft !== null && (
-          <span className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded-full ${
-            urgent ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-orange-50 text-orange-600'
-          }`}>
+          <span className="text-xs font-bold tabular-nums px-2 py-0.5 rounded-full"
+                style={{
+                  background: urgent ? 'rgba(239,68,68,0.15)' : 'rgba(201,168,76,0.12)',
+                  color: urgent ? '#F87171' : '#C9A84C',
+                  animation: urgent ? 'pulse 1s infinite' : 'none',
+                }}>
             {secsLeft}s
           </span>
         )}
       </div>
 
       {secsLeft !== null && (
-        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(240,237,228,0.06)' }}>
           <div
-            className={`h-full rounded-full transition-all duration-1000 ${urgent ? 'bg-red-400' : 'bg-accent-500'}`}
-            style={{ width: `${Math.min(100, (secsLeft / 120) * 100)}%` }}
+            className="h-full rounded-full transition-all duration-1000"
+            style={{
+              width: `${Math.min(100, (secsLeft / 120) * 100)}%`,
+              background: urgent ? '#F87171' : '#C9A84C',
+            }}
           />
         </div>
       )}
@@ -111,17 +116,17 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
         <button
           onClick={() => onDecline(call.id)}
           disabled={declining === call.id || accepting === call.id}
-          className="flex-1 border border-gray-200 text-gray-500 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition disabled:opacity-40"
+          className="btn-muted flex-1 py-2.5 text-sm"
         >
           {declining === call.id ? '...' : 'Recusar'}
         </button>
         <button
           onClick={() => onAccept(call.id)}
           disabled={accepting === call.id || declining === call.id}
-          className="flex-[2] bg-accent-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-accent-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          className="btn-gold flex-[2] py-2.5 text-sm"
         >
           {accepting === call.id ? (
-            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+            <div className="animate-spin h-4 w-4 rounded-full border-2" style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
           ) : 'Aceitar chamado'}
         </button>
       </div>
@@ -131,36 +136,37 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
 
 function ActiveJobCard({ call, onComplete, completing }) {
   return (
-    <div className="bg-white rounded-2xl border border-green-200 shadow-sm p-4 space-y-3">
+    <div className="card-success p-4 space-y-3">
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 bg-green-100 text-green-700 rounded-xl flex items-center justify-center shrink-0">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+             style={{ background: 'rgba(74,222,128,0.1)', color: '#4ADE80' }}>
           {APPLIANCE_ICON[call.appliance_type]}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800">
+          <p className="text-sm font-semibold text-cream">
             {APPLIANCE_LABEL[call.appliance_type]} {call.brand}
           </p>
-          <p className="text-sm text-gray-600 mt-0.5">{call.symptom}</p>
+          <p className="text-sm text-cream/55 mt-0.5">{call.symptom}</p>
         </div>
-        <span className="shrink-0 text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">
-          Aceito
-        </span>
+        <span className="badge badge-approved shrink-0">Aceito</span>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
-        <p className="font-semibold text-gray-700">{call.client_name}</p>
+      <div className="rounded-xl p-3 space-y-1.5 text-sm"
+           style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.15)' }}>
+        <p className="font-semibold text-cream/80">{call.client_name}</p>
         <a
           href={`https://wa.me/55${call.client_phone.replace(/\D/g,'')}`}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-1.5 text-green-700 font-medium hover:underline"
+          className="flex items-center gap-1.5 font-medium hover:underline"
+          style={{ color: '#4ADE80' }}
         >
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
           </svg>
           {fmtPhone(call.client_phone)}
         </a>
-        <p className="text-xs text-gray-400 flex items-center gap-1">
+        <p className="text-xs text-cream/35 flex items-center gap-1">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
@@ -172,10 +178,10 @@ function ActiveJobCard({ call, onComplete, completing }) {
       <button
         onClick={() => onComplete(call.id)}
         disabled={completing === call.id}
-        className="w-full border border-green-300 text-green-700 rounded-xl py-2.5 text-sm font-semibold hover:bg-green-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+        className="btn-success w-full py-2.5 text-sm"
       >
         {completing === call.id ? (
-          <div className="animate-spin h-4 w-4 border-2 border-green-600 border-t-transparent rounded-full" />
+          <div className="spinner h-4 w-4 border-2" />
         ) : 'Marcar como concluído'}
       </button>
     </div>
@@ -218,11 +224,8 @@ export default function TechnicianDashboard() {
     }
   }, [])
 
-  useEffect(() => {
-    if (user) fetchAll()
-  }, [user, fetchAll])
+  useEffect(() => { if (user) fetchAll() }, [user, fetchAll])
 
-  // Auto-refresh a cada 15 segundos (silencioso)
   useEffect(() => {
     if (!user) return
     const interval = setInterval(() => fetchAll(true), 15000)
@@ -280,23 +283,26 @@ export default function TechnicianDashboard() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen">
+      <header className="app-header px-4 sm:px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-base font-bold text-primary-700">UaiFix</h1>
-          <p className="text-xs text-gray-400">Olá, {user.name?.split(' ')[0]}</p>
+          <span className="text-base font-bold text-gold">UaiFix</span>
+          <p className="text-xs text-cream/40">Olá, {user.name?.split(' ')[0]}</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/tecnico/precos')}
-            className="text-xs text-gray-500 hover:text-primary-700 transition border border-gray-200 px-2.5 py-1.5 rounded-lg hover:border-primary-300"
+            className="text-xs text-cream/45 hover:text-cream/80 transition px-2.5 py-1.5 rounded-lg"
+            style={{ border: '1px solid rgba(201,168,76,0.2)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.2)' }}
           >
             Meus preços
           </button>
           <button
             onClick={() => fetchAll()}
             disabled={loading}
-            className="text-gray-400 hover:text-gray-600 transition disabled:opacity-40"
+            className="text-cream/35 hover:text-cream/60 transition disabled:opacity-40"
             title="Atualizar"
           >
             <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -304,17 +310,15 @@ export default function TechnicianDashboard() {
                 d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
           </button>
-          <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-800 transition">
+          <button onClick={handleLogout} className="text-sm text-cream/45 hover:text-cream/80 transition">
             Sair
           </button>
         </div>
       </header>
 
-      {toast && (
-        <div className="bg-green-600 text-white text-sm text-center py-2.5 font-medium">{toast}</div>
-      )}
+      {toast && <div className="toast-banner">{toast}</div>}
 
-      <div className="bg-white border-b border-gray-100 px-4">
+      <div className="app-header border-b" style={{ borderColor: 'rgba(201,168,76,0.12)' }}>
         <div className="max-w-2xl mx-auto flex">
           {[
             { key: 'available', label: 'Disponíveis', count: available.length },
@@ -323,17 +327,15 @@ export default function TechnicianDashboard() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition ${
-                tab === key
-                  ? 'border-primary-700 text-primary-700'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`tab-btn ${tab === key ? 'active' : ''}`}
             >
               {label}
               {count > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                  tab === key ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-500'
-                }`}>
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{
+                        background: tab === key ? 'rgba(201,168,76,0.15)' : 'rgba(240,237,228,0.06)',
+                        color: tab === key ? '#C9A84C' : 'rgba(240,237,228,0.4)',
+                      }}>
                   {count}
                 </span>
               )}
@@ -343,27 +345,24 @@ export default function TechnicianDashboard() {
       </div>
 
       <main className="max-w-2xl mx-auto px-4 py-5 space-y-3">
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {error && <div className="error-box">{error}</div>}
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin h-7 w-7 border-2 border-primary-600 border-t-transparent rounded-full" />
+            <div className="spinner h-7 w-7 border-2" />
           </div>
         ) : tab === 'available' ? (
           available.length === 0 ? (
             <div className="text-center py-16 space-y-2">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+                   style={{ background: 'rgba(240,237,228,0.05)' }}>
+                <svg className="w-6 h-6 text-cream/25" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                     d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
                 </svg>
               </div>
-              <p className="text-sm font-medium text-gray-600">Nenhum chamado disponível</p>
-              <p className="text-xs text-gray-400">Atualiza a cada 15 segundos automaticamente.</p>
+              <p className="text-sm font-medium text-cream/50">Nenhum chamado disponível</p>
+              <p className="text-xs text-cream/30">Atualiza a cada 15 segundos automaticamente.</p>
             </div>
           ) : (
             available.map((call) => (
@@ -381,14 +380,15 @@ export default function TechnicianDashboard() {
         ) : (
           myJobs.length === 0 ? (
             <div className="text-center py-16 space-y-2">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+                   style={{ background: 'rgba(240,237,228,0.05)' }}>
+                <svg className="w-6 h-6 text-cream/25" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                     d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
                 </svg>
               </div>
-              <p className="text-sm font-medium text-gray-600">Nenhum atendimento ativo</p>
-              <p className="text-xs text-gray-400">Aceite um chamado disponível para começar.</p>
+              <p className="text-sm font-medium text-cream/50">Nenhum atendimento ativo</p>
+              <p className="text-xs text-cream/30">Aceite um chamado disponível para começar.</p>
             </div>
           ) : (
             myJobs.map((call) => (

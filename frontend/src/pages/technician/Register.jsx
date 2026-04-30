@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../api/client'
 import ProgressSteps from '../../components/ProgressSteps'
 import FileUpload from '../../components/FileUpload'
+import Logo from '../../components/Logo'
 
 const STEPS = ['Dados', 'Endereço', 'CPF', 'Documentos', 'Termos']
 
@@ -56,18 +57,15 @@ function maskCEP(v) {
 
 const InputField = ({ label, required, error, children }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {label} {required && <span className="text-red-500">*</span>}
+    <label className="form-label">
+      {label} {required && <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span>}
     </label>
     {children}
-    {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    {error && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{error}</p>}
   </div>
 )
 
-const inputClass = (error) =>
-  `w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition ${
-    error ? 'border-red-400 bg-red-50' : 'border-gray-300'
-  }`
+const inputClass = (error) => `form-input${error ? ' error' : ''}`
 
 export default function TechnicianRegister() {
   const navigate = useNavigate()
@@ -188,73 +186,47 @@ export default function TechnicianRegister() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen py-8 px-4">
       <div className="max-w-lg mx-auto">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-primary-700">UaiFix</h1>
-          <p className="text-gray-500 text-sm mt-1">Cadastro de Técnico</p>
+        <div className="flex flex-col items-center mb-6">
+          <button onClick={() => navigate('/')} className="hover:opacity-80 transition">
+            <Logo size="sm" showTagline={false} />
+          </button>
+          <p className="text-cream/40 text-sm mt-2">Cadastro de Técnico</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="card p-6">
           <ProgressSteps steps={STEPS} current={step} />
 
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-800">Dados de Acesso</h2>
+              <h2 className="text-lg font-semibold text-cream">Dados de Acesso</h2>
 
               <InputField label="Nome completo" required error={errors.name}>
-                <input
-                  className={inputClass(errors.name)}
-                  placeholder="Seu nome completo"
-                  value={form.name}
-                  onChange={(e) => set('name', e.target.value)}
-                />
+                <input className={inputClass(errors.name)} placeholder="Seu nome completo" value={form.name} onChange={(e) => set('name', e.target.value)} />
               </InputField>
 
               <InputField label="WhatsApp" required error={errors.phone}>
-                <input
-                  className={inputClass(errors.phone)}
-                  placeholder="(31) 99999-9999"
-                  value={maskPhone(form.phone)}
-                  onChange={(e) => set('phone', e.target.value)}
-                />
+                <input className={inputClass(errors.phone)} placeholder="(31) 99999-9999" value={maskPhone(form.phone)} onChange={(e) => set('phone', e.target.value)} />
               </InputField>
 
               <InputField label="E-mail" required error={errors.email}>
-                <input
-                  className={inputClass(errors.email)}
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={form.email}
-                  onChange={(e) => set('email', e.target.value)}
-                />
+                <input type="email" className={inputClass(errors.email)} placeholder="seu@email.com" value={form.email} onChange={(e) => set('email', e.target.value)} />
               </InputField>
 
               <InputField label="Senha" required error={errors.password}>
-                <input
-                  className={inputClass(errors.password)}
-                  type="password"
-                  placeholder="Mínimo 8 caracteres"
-                  value={form.password}
-                  onChange={(e) => set('password', e.target.value)}
-                />
+                <input type="password" className={inputClass(errors.password)} placeholder="Mínimo 8 caracteres" value={form.password} onChange={(e) => set('password', e.target.value)} />
               </InputField>
 
               <InputField label="Confirmar senha" required error={errors.confirmPassword}>
-                <input
-                  className={inputClass(errors.confirmPassword)}
-                  type="password"
-                  placeholder="Repita a senha"
-                  value={form.confirmPassword}
-                  onChange={(e) => set('confirmPassword', e.target.value)}
-                />
+                <input type="password" className={inputClass(errors.confirmPassword)} placeholder="Repita a senha" value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} />
               </InputField>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-800">Endereço</h2>
+              <h2 className="text-lg font-semibold text-cream">Endereço</h2>
 
               <InputField label="CEP" required error={errors.zip_code}>
                 <div className="relative">
@@ -262,14 +234,11 @@ export default function TechnicianRegister() {
                     className={inputClass(errors.zip_code)}
                     placeholder="00000-000"
                     value={maskCEP(form.zip_code)}
-                    onChange={(e) => {
-                      set('zip_code', e.target.value)
-                      fetchCEP(e.target.value)
-                    }}
+                    onChange={(e) => { set('zip_code', e.target.value); fetchCEP(e.target.value) }}
                   />
                   {cepLoading && (
                     <div className="absolute right-3 top-2.5">
-                      <div className="animate-spin h-5 w-5 border-2 border-primary-600 border-t-transparent rounded-full" />
+                      <div className="spinner h-5 w-5 border-2" />
                     </div>
                   )}
                 </div>
@@ -309,9 +278,9 @@ export default function TechnicianRegister() {
 
           {step === 3 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-800">CPF</h2>
+              <h2 className="text-lg font-semibold text-cream">CPF</h2>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 leading-relaxed">
+              <div className="info-box">
                 <p className="font-semibold mb-1">Por que pedimos seu CPF?</p>
                 <p>
                   Usamos o CPF <strong>apenas para verificar sua identidade</strong> durante a análise do cadastro.
@@ -320,20 +289,15 @@ export default function TechnicianRegister() {
               </div>
 
               <InputField label="CPF" required error={errors.cpf}>
-                <input
-                  className={inputClass(errors.cpf)}
-                  placeholder="000.000.000-00"
-                  value={maskCPF(form.cpf)}
-                  onChange={(e) => set('cpf', e.target.value)}
-                />
+                <input className={inputClass(errors.cpf)} placeholder="000.000.000-00" value={maskCPF(form.cpf)} onChange={(e) => set('cpf', e.target.value)} />
               </InputField>
             </div>
           )}
 
           {step === 4 && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-gray-800">Documentos</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-lg font-semibold text-cream">Documentos</h2>
+              <p className="text-sm text-cream/45">
                 Seus documentos são analisados pela equipe UaiFix em até 48 horas e não são compartilhados com clientes.
               </p>
 
@@ -344,7 +308,7 @@ export default function TechnicianRegister() {
                 onChange={(f) => setFiles((prev) => ({ ...prev, selfie: f }))}
                 required
               />
-              {errors.selfie && <p className="text-xs text-red-600">{errors.selfie}</p>}
+              {errors.selfie && <p className="text-xs" style={{ color: '#F87171' }}>{errors.selfie}</p>}
 
               <FileUpload
                 label="Comprovante de endereço"
@@ -353,80 +317,61 @@ export default function TechnicianRegister() {
                 onChange={(f) => setFiles((prev) => ({ ...prev, proof_of_address: f }))}
                 required
               />
-              {errors.proof_of_address && <p className="text-xs text-red-600">{errors.proof_of_address}</p>}
+              {errors.proof_of_address && <p className="text-xs" style={{ color: '#F87171' }}>{errors.proof_of_address}</p>}
             </div>
           )}
 
           {step === 5 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-800">Termos de Responsabilidade</h2>
+              <h2 className="text-lg font-semibold text-cream">Termos de Responsabilidade</h2>
 
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 h-56 overflow-y-auto text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+              <div className="rounded-xl p-4 h-56 overflow-y-auto text-xs text-cream/55 whitespace-pre-wrap leading-relaxed"
+                   style={{ background: 'rgba(13,17,23,0.4)', border: '1px solid rgba(201,168,76,0.15)' }}>
                 {TERMS_TEXT}
               </div>
 
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="mt-0.5 h-4 w-4 rounded"
+                  style={{ accentColor: '#C9A84C' }}
                   checked={form.termsAccepted}
                   onChange={(e) => set('termsAccepted', e.target.checked)}
                 />
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-cream/60">
                   Li e concordo com os Termos de Responsabilidade da UaiFix. Entendo que sou profissional autônomo e que a UaiFix não garante volume de chamados.
                 </span>
               </label>
-              {errors.termsAccepted && <p className="text-xs text-red-600">{errors.termsAccepted}</p>}
+              {errors.termsAccepted && <p className="text-xs" style={{ color: '#F87171' }}>{errors.termsAccepted}</p>}
 
-              {globalError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                  {globalError}
-                </div>
-              )}
+              {globalError && <div className="error-box">{globalError}</div>}
             </div>
           )}
 
           <div className="flex gap-3 mt-8">
             {step > 1 && (
-              <button
-                onClick={back}
-                disabled={loading}
-                className="flex-1 border border-gray-300 text-gray-700 rounded-xl py-3 text-sm font-medium hover:bg-gray-50 transition disabled:opacity-50"
-              >
+              <button onClick={back} disabled={loading} className="btn-muted flex-1 py-3">
                 Voltar
               </button>
             )}
             {step < 5 ? (
-              <button
-                onClick={next}
-                className="flex-1 bg-primary-700 text-white rounded-xl py-3 text-sm font-semibold hover:bg-primary-800 transition"
-              >
-                Próximo
-              </button>
+              <button onClick={next} className="btn-gold flex-1 py-3">Próximo</button>
             ) : (
-              <button
-                onClick={submit}
-                disabled={loading}
-                className="flex-1 bg-accent-500 text-white rounded-xl py-3 text-sm font-semibold hover:bg-accent-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
-              >
+              <button onClick={submit} disabled={loading} className="btn-gold flex-1 py-3">
                 {loading ? (
                   <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    <div className="animate-spin h-4 w-4 rounded-full border-2" style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
                     Enviando...
                   </>
-                ) : (
-                  'Enviar Cadastro'
-                )}
+                ) : 'Enviar Cadastro'}
               </button>
             )}
           </div>
 
           {step === 1 && (
-            <p className="text-center text-xs text-gray-500 mt-4">
+            <p className="text-center text-xs text-cream/40 mt-4">
               Já tem conta?{' '}
-              <a href="/tecnico/login" className="text-primary-700 font-medium hover:underline">
-                Entrar
-              </a>
+              <a href="/tecnico/login" className="text-gold font-medium hover:underline">Entrar</a>
             </p>
           )}
         </div>

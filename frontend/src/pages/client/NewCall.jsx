@@ -38,8 +38,6 @@ const SYMPTOMS = {
   ],
 }
 
-const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition'
-
 function fmt(v) { return `R$ ${v}` }
 
 export default function NewCall() {
@@ -50,7 +48,6 @@ export default function NewCall() {
   const [globalError, setGlobalError] = useState('')
   const [pricing, setPricing] = useState(null)
 
-  // Busca faixa de preço quando o tipo de aparelho é selecionado
   useEffect(() => {
     if (!form.appliance_type) { setPricing(null); return }
     api.get(`/stats/pricing?appliance=${form.appliance_type}`)
@@ -99,41 +96,44 @@ export default function NewCall() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen py-8 px-4">
       <div className="max-w-lg mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => navigate('/cliente/dashboard')}
-            className="text-gray-400 hover:text-gray-700 transition p-1 -ml-1 rounded-lg hover:bg-gray-100"
+            className="text-cream/40 hover:text-cream/70 transition p-1 -ml-1 rounded-lg"
+            style={{ background: 'transparent' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(240,237,228,0.06)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h1 className="text-lg font-bold text-gray-800">Abrir chamado</h1>
-            <p className="text-xs text-gray-400">Descreva o problema do seu aparelho</p>
+            <h1 className="text-lg font-bold text-cream">Abrir chamado</h1>
+            <p className="text-xs text-cream/35">Descreva o problema do seu aparelho</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
+        <div className="card p-6 space-y-6">
 
-          {/* Tipo de aparelho */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Qual aparelho está com problema? <span className="text-red-500">*</span>
+            <label className="form-label">
+              Qual aparelho está com problema? <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span>
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mt-1">
               {APPLIANCES.map((a) => (
                 <button
                   key={a.id}
                   type="button"
                   onClick={() => set('appliance_type', a.id)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition ${
-                    form.appliance_type === a.id
-                      ? 'border-primary-600 bg-primary-50 text-primary-700'
-                      : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
+                  style={{
+                    border: `2px solid ${form.appliance_type === a.id ? '#C9A84C' : 'rgba(201,168,76,0.15)'}`,
+                    background: form.appliance_type === a.id ? 'rgba(201,168,76,0.1)' : 'rgba(13,17,23,0.3)',
+                    color: form.appliance_type === a.id ? '#C9A84C' : 'rgba(240,237,228,0.45)',
+                  }}
                 >
                   {a.icon}
                   <span className="text-sm font-medium">{a.label}</span>
@@ -141,14 +141,13 @@ export default function NewCall() {
               ))}
             </div>
             {errors.appliance_type && (
-              <p className="mt-1.5 text-xs text-red-600">{errors.appliance_type}</p>
+              <p className="mt-1.5 text-xs" style={{ color: '#F87171' }}>{errors.appliance_type}</p>
             )}
           </div>
 
-          {/* Faixa de preços estimados */}
           {pricing && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 space-y-1.5">
-              <p className="text-xs font-semibold text-blue-700 flex items-center gap-1">
+            <div className="info-box space-y-1.5">
+              <p className="text-xs font-semibold flex items-center gap-1">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
@@ -156,41 +155,31 @@ export default function NewCall() {
                 Valores estimados pelos técnicos da plataforma
               </p>
               {pricing.diagnostic && (
-                <p className="text-xs text-blue-800">
-                  Visita diagnóstico: <span className="font-semibold">{fmt(pricing.diagnostic.min)} – {fmt(pricing.diagnostic.max)}</span>
-                </p>
+                <p className="text-xs">Visita diagnóstico: <span className="font-semibold">{fmt(pricing.diagnostic.min)} – {fmt(pricing.diagnostic.max)}</span></p>
               )}
               {pricing.repair && (
-                <p className="text-xs text-blue-800">
-                  Conserto: <span className="font-semibold">{fmt(pricing.repair.min)} – {fmt(pricing.repair.max)}</span>
-                </p>
+                <p className="text-xs">Conserto: <span className="font-semibold">{fmt(pricing.repair.min)} – {fmt(pricing.repair.max)}</span></p>
               )}
-              <p className="text-xs text-blue-600">O valor final é combinado diretamente com o técnico.</p>
+              <p className="text-xs opacity-70">O valor final é combinado diretamente com o técnico.</p>
             </div>
           )}
 
-          {/* Marca */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Marca <span className="text-red-500">*</span>
-            </label>
+            <label className="form-label">Marca <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span></label>
             <input
-              className={`${inputClass} ${errors.brand ? 'border-red-400 bg-red-50' : ''}`}
+              className={`form-input mt-1${errors.brand ? ' error' : ''}`}
               placeholder="Ex: Brastemp, Electrolux, Samsung..."
               value={form.brand}
               onChange={(e) => set('brand', e.target.value)}
             />
-            {errors.brand && <p className="mt-1 text-xs text-red-600">{errors.brand}</p>}
+            {errors.brand && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{errors.brand}</p>}
           </div>
 
-          {/* Sintoma */}
           {form.appliance_type && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Qual o problema? <span className="text-red-500">*</span>
-              </label>
+              <label className="form-label">Qual o problema? <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span></label>
               <select
-                className={`${inputClass} ${errors.symptom ? 'border-red-400 bg-red-50' : ''}`}
+                className={`form-input mt-1${errors.symptom ? ' error' : ''}`}
                 value={form.symptom}
                 onChange={(e) => set('symptom', e.target.value)}
               >
@@ -199,37 +188,28 @@ export default function NewCall() {
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              {errors.symptom && <p className="mt-1 text-xs text-red-600">{errors.symptom}</p>}
+              {errors.symptom && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{errors.symptom}</p>}
             </div>
           )}
 
-          {/* Descrição */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Detalhes adicionais <span className="text-gray-400 font-normal">(opcional)</span>
+            <label className="form-label">
+              Detalhes adicionais <span className="text-cream/25 font-normal normal-case">(opcional)</span>
             </label>
             <textarea
               rows={3}
-              className={`${inputClass} resize-none`}
+              className="form-input mt-1"
               placeholder="Ex: o barulho começou há 3 dias, aparece uma luz piscando..."
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
             />
           </div>
 
-          {globalError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-              {globalError}
-            </div>
-          )}
+          {globalError && <div className="error-box">{globalError}</div>}
 
-          <button
-            onClick={submit}
-            disabled={loading}
-            className="w-full bg-primary-700 text-white rounded-xl py-3 text-sm font-semibold hover:bg-primary-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
+          <button onClick={submit} disabled={loading} className="btn-gold w-full py-3">
             {loading ? (
-              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+              <div className="animate-spin h-4 w-4 rounded-full border-2" style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
             ) : 'Abrir chamado'}
           </button>
         </div>

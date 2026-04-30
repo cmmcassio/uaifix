@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(python *)",
+      "Bash(tasklist)",
+      "Bash(netstat -ano)",
+      "Bash(.venv\\\\Scripts\\\\python.exe *)",
+      "Bash(venv/Scripts/python.exe -c \"from app.routes.calls import router; print\\('calls router OK'\\); [print\\(f'  {r.methods} {r.path}'\\) for r in router.routes]\")",
+      "Bash(git add *)",
+      "Bash(venv/Scripts/python.exe -c ' *)",
+      "Bash(git reset *)"
+    ]
+  }
+}

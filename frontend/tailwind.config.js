@@ -4,18 +4,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
+        gold: {
+          DEFAULT: '#C9A84C',
+          light: '#E8C96E',
         },
-        accent: {
-          500: '#f97316',
-          600: '#ea580c',
+        cream: '#F0EDE4',
+        dark: {
+          base: '#0D1117',
+          surface: '#1A1F2E',
         },
+        terracotta: '#8B4513',
+      },
+      opacity: {
+        22: '0.22',
+        35: '0.35',
+        45: '0.45',
+        55: '0.55',
+        65: '0.65',
+        85: '0.85',
       },
     },
   },

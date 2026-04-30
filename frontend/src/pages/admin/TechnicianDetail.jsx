@@ -4,9 +4,9 @@ import { useAuth } from '../../contexts/AuthContext'
 import api from '../../api/client'
 
 const STATUS = {
-  pending:  { label: 'Pendente',  cls: 'bg-yellow-100 text-yellow-800' },
-  approved: { label: 'Aprovado',  cls: 'bg-green-100 text-green-800' },
-  rejected: { label: 'Reprovado', cls: 'bg-red-100 text-red-800' },
+  pending:  { label: 'Pendente',  cls: 'badge badge-pending' },
+  approved: { label: 'Aprovado',  cls: 'badge badge-approved' },
+  rejected: { label: 'Reprovado', cls: 'badge badge-rejected' },
 }
 
 const REF_TYPES = { supplier: 'Fornecedor de peças', client: 'Cliente antigo' }
@@ -21,17 +21,21 @@ function fmt(iso) {
 
 function Row({ label, value }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-0 py-2.5 border-b border-gray-100 last:border-0">
-      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide sm:w-48 shrink-0 pt-0.5">{label}</span>
-      <span className="text-sm text-gray-800 break-all">{value || '—'}</span>
+    <div className="flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-0 py-2.5 last:border-0"
+         style={{ borderBottom: '1px solid rgba(201,168,76,0.08)' }}>
+      <span className="text-[10px] font-bold uppercase tracking-widest sm:w-48 shrink-0 pt-0.5"
+            style={{ color: 'rgba(201,168,76,0.45)' }}>
+        {label}
+      </span>
+      <span className="text-sm text-cream/80 break-all">{value || '—'}</span>
     </div>
   )
 }
 
 function Section({ title, children }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-      <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">{title}</h2>
+    <div className="card p-5">
+      <h2 className="section-title">{title}</h2>
       {children}
     </div>
   )
@@ -42,19 +46,21 @@ function DocImage({ label, url }) {
 
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{label}</p>
+      <p className="section-title">{label}</p>
       {url ? (
         <>
           <img
             src={url}
             alt={label}
             onClick={() => setEnlarged(true)}
-            className="w-full rounded-xl object-cover max-h-52 border border-gray-200 cursor-zoom-in hover:opacity-90 transition"
+            className="w-full rounded-xl object-cover max-h-52 cursor-zoom-in hover:opacity-90 transition"
+            style={{ border: '1px solid rgba(201,168,76,0.2)' }}
           />
-          <p className="text-xs text-gray-400 mt-1 text-center">Clique para ampliar</p>
+          <p className="text-xs text-cream/25 mt-1 text-center">Clique para ampliar</p>
           {enlarged && (
             <div
-              className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: 'rgba(0,0,0,0.92)' }}
               onClick={() => setEnlarged(false)}
             >
               <img src={url} alt={label} className="max-w-full max-h-full rounded-xl shadow-2xl" />
@@ -62,7 +68,8 @@ function DocImage({ label, url }) {
           )}
         </>
       ) : (
-        <div className="bg-gray-100 rounded-xl h-36 flex items-center justify-center text-gray-400 text-sm">
+        <div className="rounded-xl h-36 flex items-center justify-center text-sm text-cream/25"
+             style={{ background: 'rgba(240,237,228,0.03)', border: '1px solid rgba(240,237,228,0.07)' }}>
           Não enviado
         </div>
       )}
@@ -124,8 +131,8 @@ export default function TechnicianDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-2 border-primary-600 border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="spinner h-8 w-8 border-2" />
       </div>
     )
   }
@@ -137,11 +144,11 @@ export default function TechnicianDetail() {
   const s    = STATUS[tech.status] || STATUS.pending
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center gap-3">
+    <div className="min-h-screen">
+      <header className="app-header px-4 sm:px-6 py-4 flex items-center gap-3">
         <button
           onClick={() => navigate('/admin/tecnicos')}
-          className="text-gray-400 hover:text-gray-700 transition p-1 -ml-1 rounded-lg hover:bg-gray-100"
+          className="text-cream/40 hover:text-cream/70 transition p-1 -ml-1 rounded-lg"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -149,23 +156,18 @@ export default function TechnicianDetail() {
         </button>
 
         <div className="flex-1 min-w-0">
-          <h1 className="text-base font-bold text-gray-800 truncate">{tech.name}</h1>
-          <p className="text-xs text-gray-400">Análise de cadastro</p>
+          <h1 className="text-base font-bold text-cream truncate">{tech.name}</h1>
+          <p className="text-xs text-cream/35">Análise de cadastro</p>
         </div>
 
-        <span className={`shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${s.cls}`}>
-          {s.label}
-        </span>
+        <span className={s.cls}>{s.label}</span>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-4">
 
         {feedback && (
-          <div className={`rounded-xl px-4 py-3 text-sm font-medium flex items-center gap-2 ${
-            feedback.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
+          <div className={feedback.type === 'success' ? 'toast-banner rounded-xl' : 'error-box rounded-xl'}
+               style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {feedback.type === 'success' ? (
               <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -179,7 +181,6 @@ export default function TechnicianDetail() {
           </div>
         )}
 
-        {/* Decisão — aparece primeiro para técnicos pendentes */}
         {tech.status === 'pending' && (
           <Section title="Decisão">
             {!showRejectForm ? (
@@ -187,21 +188,23 @@ export default function TechnicianDetail() {
                 <button
                   onClick={approve}
                   disabled={actionLoading}
-                  className="flex-1 bg-green-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-green-700 active:bg-green-800 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="btn-success flex-1 py-3"
                 >
                   {actionLoading ? (
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    <div className="spinner h-4 w-4 border-2" />
                   ) : (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Aprovar Técnico
+                    </>
                   )}
-                  Aprovar Técnico
                 </button>
                 <button
                   onClick={() => setShowRejectForm(true)}
                   disabled={actionLoading}
-                  className="flex-1 bg-red-50 text-red-700 border border-red-200 rounded-xl py-3 text-sm font-semibold hover:bg-red-100 transition disabled:opacity-50"
+                  className="btn-danger flex-1 py-3"
                 >
                   Reprovar
                 </button>
@@ -209,13 +212,13 @@ export default function TechnicianDetail() {
             ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Motivo da reprovação <span className="text-red-500">*</span>
+                  <label className="form-label">
+                    Motivo da reprovação <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span>
                   </label>
                   <textarea
                     rows={3}
                     autoFocus
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                    className="form-input mt-1"
                     placeholder="Explique o motivo para o técnico (ex: documento ilegível, CPF inválido)..."
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
@@ -225,18 +228,16 @@ export default function TechnicianDetail() {
                   <button
                     onClick={() => { setShowRejectForm(false); setRejectReason('') }}
                     disabled={actionLoading}
-                    className="flex-1 border border-gray-300 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition"
+                    className="btn-muted flex-1 py-2.5"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={reject}
                     disabled={actionLoading || !rejectReason.trim()}
-                    className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="btn-danger flex-1 py-2.5"
                   >
-                    {actionLoading && (
-                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                    )}
+                    {actionLoading && <div className="spinner h-4 w-4 border-2" />}
                     Confirmar Reprovação
                   </button>
                 </div>
@@ -246,12 +247,11 @@ export default function TechnicianDetail() {
         )}
 
         {tech.rejection_reason && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">
+          <div className="error-box rounded-xl">
             <span className="font-semibold">Motivo da reprovação:</span> {tech.rejection_reason}
           </div>
         )}
 
-        {/* Documentos */}
         <Section title="Documentos">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <DocImage label="Selfie" url={tech.selfie_url} />
@@ -259,7 +259,6 @@ export default function TechnicianDetail() {
           </div>
         </Section>
 
-        {/* Dados pessoais */}
         <Section title="Dados Pessoais">
           <Row label="Nome" value={tech.name} />
           <Row label="CPF" value={tech.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')} />
@@ -271,18 +270,13 @@ export default function TechnicianDetail() {
           {tech.rejected_at && <Row label="Reprovado em" value={fmt(tech.rejected_at)} />}
         </Section>
 
-        {/* Endereço */}
         <Section title="Endereço">
           <Row label="CEP" value={addr.zip_code.replace(/(\d{5})(\d{3})/, '$1-$2')} />
-          <Row
-            label="Logradouro"
-            value={`${addr.street}, ${addr.number}${addr.complement ? ` — ${addr.complement}` : ''}`}
-          />
+          <Row label="Logradouro" value={`${addr.street}, ${addr.number}${addr.complement ? ` — ${addr.complement}` : ''}`} />
           <Row label="Bairro" value={addr.neighborhood} />
           <Row label="Cidade / UF" value={`${addr.city} / ${addr.state}`} />
         </Section>
 
-        {/* Referência comercial — só exibe se preenchida */}
         {ref && (
           <Section title="Referência Comercial">
             <Row label="Tipo" value={REF_TYPES[ref.type] || ref.type} />

@@ -9,7 +9,7 @@ export default function StarRating({ value, onChange, disabled = false, size = '
           onClick={() => !disabled && onChange(n)}
           className={`${sz} leading-none transition-transform ${
             disabled ? 'cursor-default' : 'cursor-pointer hover:scale-110'
-          } ${n <= value ? 'text-yellow-400' : 'text-gray-200'}`}
+          } ${n <= value ? 'text-gold' : 'text-cream/15'}`}
         >
           ★
         </button>
