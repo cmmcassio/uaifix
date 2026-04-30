@@ -73,7 +73,7 @@ export default function Home() {
         <button
           onClick={() => navigate('/admin/login')}
           className="text-xs text-cream/22 hover:text-cream/50 transition"
-          style={{ color: 'rgba(240,237,228,0.22)' }}
+          style={{ color: 'rgba(44,36,22,0.4)' }}
         >
           Acesso administrativo
         </button>
