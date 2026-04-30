@@ -48,8 +48,8 @@ export default function Home() {
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(201,168,76,0.1)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             >
-              Sou Técnico
-              <span className="text-xs font-normal mt-0.5" style={{ opacity: 0.5 }}>Cadastrar ou entrar</span>
+              <span style={{ color: '#555555' }}>Sou Técnico</span>
+              <span className="text-xs font-normal mt-0.5" style={{ color: '#555555' }}>Cadastrar ou entrar</span>
             </button>
           </div>
 
