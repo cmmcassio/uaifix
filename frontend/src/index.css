@@ -6,33 +6,36 @@
   :root {
     --gold: #C9A84C;
     --gold-light: #E8C96E;
+    --gold-dark: #8B6914;
     --gold-dim: rgba(201, 168, 76, 0.25);
-    --dark-base: #0D1117;
-    --dark-surface: rgba(26, 31, 46, 0.85);
-    --cream: #F0EDE4;
-    --muted: rgba(240, 237, 228, 0.45);
+    --paper: #F5F0E8;
+    --paper-dark: #EDE8DC;
+    --text-primary: #2C2416;
+    --text-secondary: #6B5B3E;
+    --muted: rgba(44, 36, 22, 0.45);
   }
 
   html {
     -webkit-tap-highlight-color: transparent;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
     @apply antialiased;
-    background: linear-gradient(135deg, #0D1117 0%, #1A1F2E 100%);
+    background: linear-gradient(135deg, #F5F0E8 0%, #EDE8DC 100%);
     background-attachment: fixed;
-    color: #F0EDE4;
+    color: #2C2416;
     min-height: 100vh;
   }
 
+  /* Textura de papel envelhecido */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.03;
+    opacity: 0.05;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size: 200px 200px;
   }
@@ -43,75 +46,75 @@
   }
 
   input, textarea, select {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   select option {
-    background-color: #1A1F2E;
-    color: #F0EDE4;
+    background-color: #EDE8DC;
+    color: #2C2416;
   }
 }
 
 @layer components {
   /* Glassmorphism cards */
   .card {
-    background: rgba(26, 31, 46, 0.85);
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(201, 168, 76, 0.25);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
   }
 
   .card-accent {
-    background: rgba(26, 31, 46, 0.92);
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(201, 168, 76, 0.5);
-    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.15);
     border-radius: 12px;
   }
 
   .card-warn {
-    background: rgba(26, 31, 46, 0.85);
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(234, 179, 8, 0.35);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
   }
 
   .card-success {
-    background: rgba(26, 31, 46, 0.85);
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(34, 197, 94, 0.35);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
   }
 
   .card-danger {
-    background: rgba(26, 31, 46, 0.85);
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(239, 68, 68, 0.4);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
     border-radius: 12px;
   }
 
   /* App header */
   .app-header {
-    background: rgba(13, 17, 23, 0.88);
+    background: rgba(245, 240, 232, 0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+    border-bottom: 1px solid rgba(201, 168, 76, 0.2);
   }
 
   /* Gold filled button */
   .btn-gold {
     @apply inline-flex items-center justify-center gap-2 font-bold transition-all;
     background-color: #C9A84C;
-    color: #0D1117;
+    color: #2C2416;
     border-radius: 8px;
     padding: 12px 16px;
     font-size: 0.875rem;
@@ -123,7 +126,7 @@
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 font-semibold transition-all;
     background: transparent;
-    color: #F0EDE4;
+    color: #8B6914;
     border: 1px solid #C9A84C;
     border-radius: 8px;
     padding: 12px 16px;
@@ -135,65 +138,65 @@
   /* Muted / back button */
   .btn-muted {
     @apply inline-flex items-center justify-center gap-2 font-medium transition-all;
-    background: rgba(240, 237, 228, 0.05);
-    color: rgba(240, 237, 228, 0.55);
-    border: 1px solid rgba(240, 237, 228, 0.1);
+    background: rgba(44, 36, 22, 0.05);
+    color: rgba(44, 36, 22, 0.55);
+    border: 1px solid rgba(44, 36, 22, 0.12);
     border-radius: 8px;
     padding: 12px 16px;
     font-size: 0.875rem;
   }
   .btn-muted:hover:not(:disabled) {
-    background: rgba(240, 237, 228, 0.08);
-    color: rgba(240, 237, 228, 0.8);
+    background: rgba(44, 36, 22, 0.08);
+    color: rgba(44, 36, 22, 0.8);
   }
   .btn-muted:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Success / approve button */
   .btn-success {
     @apply inline-flex items-center justify-center gap-2 font-semibold transition-all;
-    background: rgba(34, 197, 94, 0.12);
-    color: #4ADE80;
-    border: 1px solid rgba(34, 197, 94, 0.3);
+    background: rgba(34, 197, 94, 0.1);
+    color: #166534;
+    border: 1px solid rgba(34, 197, 94, 0.35);
     border-radius: 8px;
     padding: 12px 16px;
     font-size: 0.875rem;
   }
-  .btn-success:hover:not(:disabled) { background: rgba(34, 197, 94, 0.22); }
+  .btn-success:hover:not(:disabled) { background: rgba(34, 197, 94, 0.18); }
   .btn-success:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Danger / reject button */
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 font-semibold transition-all;
-    background: rgba(239, 68, 68, 0.12);
-    color: #F87171;
+    background: rgba(239, 68, 68, 0.08);
+    color: #991B1B;
     border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 8px;
     padding: 12px 16px;
     font-size: 0.875rem;
   }
-  .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.22); }
+  .btn-danger:hover:not(:disabled) { background: rgba(239, 68, 68, 0.15); }
   .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* Dark form input */
+  /* Light form input */
   .form-input {
     width: 100%;
-    background: rgba(13, 17, 23, 0.55);
-    border: 1px solid rgba(201, 168, 76, 0.2);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(201, 168, 76, 0.25);
     border-radius: 8px;
     padding: 10px 12px;
     font-size: 0.875rem;
-    color: #F0EDE4;
+    color: #2C2416;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
-  .form-input::placeholder { color: rgba(240, 237, 228, 0.22); }
+  .form-input::placeholder { color: rgba(44, 36, 22, 0.35); }
   .form-input:focus {
     border-color: #C9A84C;
-    box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.12);
+    box-shadow: 0 0 0 2px rgba(201, 168, 76, 0.15);
   }
   .form-input.error {
     border-color: rgba(239, 68, 68, 0.5);
-    background: rgba(239, 68, 68, 0.05);
+    background: rgba(239, 68, 68, 0.04);
   }
 
   select.form-input {
@@ -207,12 +210,12 @@
 
   textarea.form-input { resize: none; }
 
-  /* Gold label */
+  /* Gold dark label (legível sobre fundo claro) */
   .form-label {
     display: block;
     font-size: 0.68rem;
     font-weight: 700;
-    color: rgba(201, 168, 76, 0.72);
+    color: #8B6914;
     text-transform: uppercase;
     letter-spacing: 0.07em;
     margin-bottom: 5px;
@@ -224,68 +227,68 @@
   }
   .badge-pending {
     background: rgba(234, 179, 8, 0.12);
-    color: #F59E0B;
-    border: 1px solid rgba(234, 179, 8, 0.25);
+    color: #92400E;
+    border: 1px solid rgba(234, 179, 8, 0.3);
   }
   .badge-approved {
-    background: rgba(34, 197, 94, 0.12);
-    color: #4ADE80;
-    border: 1px solid rgba(34, 197, 94, 0.25);
+    background: rgba(34, 197, 94, 0.1);
+    color: #166534;
+    border: 1px solid rgba(34, 197, 94, 0.3);
   }
   .badge-rejected {
-    background: rgba(239, 68, 68, 0.12);
-    color: #F87171;
+    background: rgba(239, 68, 68, 0.1);
+    color: #991B1B;
     border: 1px solid rgba(239, 68, 68, 0.25);
   }
   .badge-active {
-    background: rgba(59, 130, 246, 0.12);
-    color: #60A5FA;
+    background: rgba(59, 130, 246, 0.1);
+    color: #1E40AF;
     border: 1px solid rgba(59, 130, 246, 0.25);
   }
   .badge-done {
-    background: rgba(240, 237, 228, 0.06);
-    color: rgba(240, 237, 228, 0.45);
-    border: 1px solid rgba(240, 237, 228, 0.1);
+    background: rgba(44, 36, 22, 0.06);
+    color: rgba(44, 36, 22, 0.45);
+    border: 1px solid rgba(44, 36, 22, 0.1);
   }
 
   /* Section heading (inside cards) */
   .section-title {
     font-size: 0.62rem;
     font-weight: 800;
-    color: rgba(201, 168, 76, 0.6);
+    color: #8B6914;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: 12px;
   }
 
   /* Subtle gold divider */
-  .divider { border-top: 1px solid rgba(201, 168, 76, 0.1); margin: 16px 0; }
+  .divider { border-top: 1px solid rgba(201, 168, 76, 0.15); margin: 16px 0; }
 
   /* Info box */
   .info-box {
-    background: rgba(201, 168, 76, 0.06);
-    border: 1px solid rgba(201, 168, 76, 0.2);
+    background: rgba(201, 168, 76, 0.08);
+    border: 1px solid rgba(201, 168, 76, 0.25);
     border-radius: 8px;
     padding: 12px 14px;
     font-size: 0.8rem;
-    color: rgba(201, 168, 76, 0.88);
+    color: #8B6914;
   }
 
   /* Error box */
   .error-box {
-    background: rgba(239, 68, 68, 0.08);
+    background: rgba(239, 68, 68, 0.07);
     border: 1px solid rgba(239, 68, 68, 0.25);
     border-radius: 8px;
     padding: 10px 14px;
     font-size: 0.875rem;
-    color: #F87171;
+    color: #991B1B;
   }
 
   /* Success toast banner */
   .toast-banner {
-    background: rgba(34, 197, 94, 0.1);
+    background: rgba(34, 197, 94, 0.08);
     border-bottom: 1px solid rgba(34, 197, 94, 0.2);
-    color: #4ADE80;
+    color: #166534;
     text-align: center;
     padding: 10px 16px;
     font-size: 0.875rem;
@@ -296,16 +299,16 @@
   .tab-btn {
     @apply flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors;
     border-color: transparent;
-    color: rgba(240, 237, 228, 0.4);
+    color: rgba(44, 36, 22, 0.4);
   }
-  .tab-btn:hover { color: rgba(240, 237, 228, 0.7); }
-  .tab-btn.active { border-color: #C9A84C; color: #C9A84C; }
+  .tab-btn:hover { color: rgba(44, 36, 22, 0.7); }
+  .tab-btn.active { border-color: #C9A84C; color: #8B6914; }
 
   /* Spinner */
   .spinner {
     @apply animate-spin rounded-full;
     border-style: solid;
-    border-color: rgba(201, 168, 76, 0.25);
+    border-color: rgba(201, 168, 76, 0.2);
     border-top-color: #C9A84C;
   }
 }

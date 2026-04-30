@@ -7,11 +7,18 @@ export default {
         gold: {
           DEFAULT: '#C9A84C',
           light: '#E8C96E',
+          dark: '#8B6914',
         },
-        cream: '#F0EDE4',
+        // cream agora é o texto principal (marrom escuro quente)
+        cream: '#2C2416',
+        // dark agora aponta para os beges de fundo
         dark: {
-          base: '#0D1117',
-          surface: '#1A1F2E',
+          base: '#F5F0E8',
+          surface: '#EDE8DC',
+        },
+        paper: {
+          DEFAULT: '#F5F0E8',
+          dark: '#EDE8DC',
         },
         terracotta: '#8B4513',
       },
