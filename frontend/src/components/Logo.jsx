@@ -16,17 +16,17 @@ export default function Logo({ size = 'md', showTagline = true }) {
 
         {/* Chave de fenda — rotada -45° (NW → SE) */}
         <g transform="rotate(-45, 32, 32)">
-          <line x1="22" y1="12" x2="42" y2="12" stroke={G} strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="32" y1="12" x2="32" y2="52" stroke={G} strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="26" y1="52" x2="38" y2="52" stroke={G} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="22" y1="12" x2="42" y2="12" stroke="#C9A84C" strokeWidth="4" strokeLinecap="round" />
+          <line x1="32" y1="12" x2="32" y2="52" stroke="#C9A84C" strokeWidth="4" strokeLinecap="round" />
+          <line x1="26" y1="52" x2="38" y2="52" stroke="#C9A84C" strokeWidth="4" strokeLinecap="round" />
         </g>
 
         {/* Chave de boca — rotada +45° (NE → SW) */}
         <g transform="rotate(45, 32, 32)">
           <path
             d="M 24 10 L 24 22 L 27 22 L 27 54 L 37 54 L 37 22 L 40 22 L 40 10"
-            stroke={G}
-            strokeWidth="2.5"
+            stroke="#C9A84C"
+            strokeWidth="4"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
