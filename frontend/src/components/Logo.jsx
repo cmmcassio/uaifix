@@ -7,15 +7,20 @@ export default function Logo({ size = 'md', showTagline = true }) {
     <div className="flex flex-col items-center gap-2">
       {/*
         viewBox 0 0 64 64 — circle cx=32 cy=32 r=28
-        Screwdriver: designed vertically, rotated -45° → aponta NW→SE
-          · T-head crossbar horizontal no topo (y=12)
-          · Shaft vertical (x=32, de y=12 até y=52)
-          · Flat-head tip horizontal na ponta (y=52)
-        Wrench: designed vertically, rotated +45° → aponta NE→SW
-          · Jaw aberto no topo — dois braços paralelos (x=24 e x=40, de y=10 até y=22)
-          · Transição para o cabo (afunila de 16px para 10px de largura)
-          · Cabo retangular de y=22 até y=54
-        Todos os pontos ficam dentro de r=28 (verificado geometricamente).
+
+        Chave de fenda (rotate -45°, NW→SE):
+          · Cabo oval: ellipse cx=32 cy=13 rx=7 ry=5
+          · Haste: linha vertical x=32, y=18→48
+          · Taper: de (32,48) para (27.5,52) e (36.5,52)
+          · Ponta flat-head: linha horizontal y=52, x=27.5→36.5
+
+        Chave de boca (rotate +45°, NE→SW):
+          · Contorno externo: jaw aberto no topo, afunila para cabo retangular
+            M 24 10 → baixo até y=24, taper para y=27, cabo até y=54, volta
+          · Jaw interior: braço esq (x=29, y=10→21), braço dir (x=35, y=10→21)
+          · Fundo do U: linha y=21, x=29→35
+
+        Todos os pontos verificados: distância do centro ≤ 28.
       */}
       <svg
         width={dim}
@@ -26,46 +31,48 @@ export default function Logo({ size = 'md', showTagline = true }) {
       >
         <circle cx="32" cy="32" r="28" stroke={G} strokeWidth="2.5" />
 
-        {/* Chave de fenda — rotada -45° (NW → SE) */}
+        {/* Chave de fenda — cabo oval, haste, ponta flat-head — rotada -45° (NW→SE) */}
         <g transform="rotate(-45, 32, 32)">
-          {/* Cabeça em T: barra horizontal */}
-          <line x1="22" y1="12" x2="42" y2="12" stroke={G} strokeWidth="2.5" strokeLinecap="round" />
-          {/* Haste vertical */}
-          <line x1="32" y1="12" x2="32" y2="52" stroke={G} strokeWidth="2.5" strokeLinecap="round" />
-          {/* Ponta plana (flat-head) */}
-          <line x1="26" y1="52" x2="38" y2="52" stroke={G} strokeWidth="2.5" strokeLinecap="round" />
+          {/* Cabo oval */}
+          <ellipse cx="32" cy="13" rx="7" ry="5" stroke={G} strokeWidth="2" fill="none" />
+          {/* Haste */}
+          <line x1="32" y1="18" x2="32" y2="48" stroke={G} strokeWidth="2" strokeLinecap="round" />
+          {/* Taper esquerdo */}
+          <line x1="32" y1="48" x2="27.5" y2="52" stroke={G} strokeWidth="1.5" strokeLinecap="round" />
+          {/* Taper direito */}
+          <line x1="32" y1="48" x2="36.5" y2="52" stroke={G} strokeWidth="1.5" strokeLinecap="round" />
+          {/* Ponta flat-head */}
+          <line x1="27.5" y1="52" x2="36.5" y2="52" stroke={G} strokeWidth="2.5" strokeLinecap="round" />
         </g>
 
-        {/* Chave de boca — rotada +45° (NE → SW) */}
+        {/* Chave de boca — jaw em U aberto, cabo retangular — rotada +45° (NE→SW) */}
         <g transform="rotate(45, 32, 32)">
-          {/*
-            Perfil da chave: jaw aberto no topo, cabo embaixo.
-            Braço esquerdo: (24,10)→(24,22), depois afunila para (27,22)
-            Cabo esquerdo: (27,22)→(27,54)
-            Fundo do cabo: (27,54)→(37,54)
-            Cabo direito: (37,54)→(37,22)
-            Afunila direito: (37,22)→(40,22)
-            Braço direito: (40,22)→(40,10)
-          */}
+          {/* Contorno externo: jaw + transição afunilada + cabo */}
           <path
-            d="M 24 10 L 24 22 L 27 22 L 27 54 L 37 54 L 37 22 L 40 22 L 40 10"
+            d="M 24 10 L 24 24 L 27 27 L 27 54 L 37 54 L 37 27 L 40 24 L 40 10"
             stroke={G}
-            strokeWidth="2.5"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+          {/* Braço interno esquerdo do jaw */}
+          <line x1="29" y1="10" x2="29" y2="21" stroke={G} strokeWidth="2" strokeLinecap="round" />
+          {/* Braço interno direito do jaw */}
+          <line x1="35" y1="10" x2="35" y2="21" stroke={G} strokeWidth="2" strokeLinecap="round" />
+          {/* Fundo do jaw (forma o U) */}
+          <line x1="29" y1="21" x2="35" y2="21" stroke={G} strokeWidth="2" strokeLinecap="round" />
         </g>
       </svg>
 
       <div className="text-center">
         <span className={`${textSize} font-bold leading-none`}>
           <span style={{ color: '#C9A84C' }}>U</span>
-          <span style={{ color: '#F0EDE4' }}>ai</span>
+          <span style={{ color: '#2C2416' }}>ai</span>
           <span style={{ color: '#C9A84C' }}>F</span>
-          <span style={{ color: '#F0EDE4' }}>ix</span>
+          <span style={{ color: '#2C2416' }}>ix</span>
         </span>
         {showTagline && (
-          <p className="text-[10px] mt-0.5 tracking-wide" style={{ color: 'rgba(240,237,228,0.38)' }}>
+          <p className="text-[10px] mt-0.5 tracking-wide" style={{ color: 'rgba(44,36,22,0.5)' }}>
             Assistência técnica de confiança
           </p>
         )}
