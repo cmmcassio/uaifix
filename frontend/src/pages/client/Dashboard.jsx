@@ -56,7 +56,12 @@ export default function ClientDashboard() {
     finally { setLoadingCall(false) }
   }
 
-  useEffect(() => { fetchCalls() }, [user])
+  useEffect(() => {
+    if (!user) return
+    fetchCalls()
+    const id = setInterval(fetchCalls, 15000)
+    return () => clearInterval(id)
+  }, [user])
 
   const activeCall = calls.find((c) => ['open', 'accepted', 'in_progress'].includes(c.status))
   const pendingRating = !activeCall && calls.find((c) => c.status === 'completed' && !c.rated_by_client)

@@ -103,7 +103,7 @@ export default function NewCall() {
             onClick={() => navigate('/cliente/dashboard')}
             className="text-cream/40 hover:text-cream/70 transition p-1 -ml-1 rounded-lg"
             style={{ background: 'transparent' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(240,237,228,0.06)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(44,36,22,0.06)' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -131,8 +131,8 @@ export default function NewCall() {
                   className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all"
                   style={{
                     border: `2px solid ${form.appliance_type === a.id ? '#C9A84C' : 'rgba(201,168,76,0.15)'}`,
-                    background: form.appliance_type === a.id ? 'rgba(201,168,76,0.1)' : 'rgba(13,17,23,0.3)',
-                    color: form.appliance_type === a.id ? '#C9A84C' : 'rgba(240,237,228,0.45)',
+                    background: form.appliance_type === a.id ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.65)',
+                    color: form.appliance_type === a.id ? '#C9A84C' : 'rgba(44,36,22,0.6)',
                   }}
                 >
                   {a.icon}
