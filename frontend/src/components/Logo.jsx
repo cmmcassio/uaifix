@@ -1,5 +1,5 @@
 export default function Logo({ size = 'md', showTagline = true }) {
-  const dim = { sm: 40, md: 52, lg: 64 }[size] ?? 52
+  const dim = { sm: 52, md: 72, lg: 88 }[size] ?? 72
   const textSize = { sm: 'text-xl', md: 'text-2xl', lg: 'text-3xl' }[size] ?? 'text-2xl'
   const G = '#C9A84C'
 
@@ -34,15 +34,15 @@ export default function Logo({ size = 'md', showTagline = true }) {
         {/* Chave de fenda — cabo oval, haste, ponta flat-head — rotada -45° (NW→SE) */}
         <g transform="rotate(-45, 32, 32)">
           {/* Cabo oval */}
-          <ellipse cx="32" cy="13" rx="7" ry="5" stroke={G} strokeWidth="2" fill="none" />
+          <ellipse cx="32" cy="13" rx="9" ry="6" stroke={G} strokeWidth="3.5" fill="none" />
           {/* Haste */}
-          <line x1="32" y1="18" x2="32" y2="48" stroke={G} strokeWidth="2" strokeLinecap="round" />
+          <line x1="32" y1="19" x2="32" y2="48" stroke={G} strokeWidth="3.5" strokeLinecap="round" />
           {/* Taper esquerdo */}
-          <line x1="32" y1="48" x2="27.5" y2="52" stroke={G} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="32" y1="48" x2="27.5" y2="52" stroke={G} strokeWidth="3.5" strokeLinecap="round" />
           {/* Taper direito */}
-          <line x1="32" y1="48" x2="36.5" y2="52" stroke={G} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="32" y1="48" x2="36.5" y2="52" stroke={G} strokeWidth="3.5" strokeLinecap="round" />
           {/* Ponta flat-head */}
-          <line x1="27.5" y1="52" x2="36.5" y2="52" stroke={G} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="27.5" y1="52" x2="36.5" y2="52" stroke={G} strokeWidth="3.5" strokeLinecap="round" />
         </g>
 
         {/* Chave de boca — jaw em U aberto, cabo retangular — rotada +45° (NE→SW) */}
@@ -51,16 +51,16 @@ export default function Logo({ size = 'md', showTagline = true }) {
           <path
             d="M 24 10 L 24 24 L 27 27 L 27 54 L 37 54 L 37 27 L 40 24 L 40 10"
             stroke={G}
-            strokeWidth="2"
+            strokeWidth="3.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
           {/* Braço interno esquerdo do jaw */}
-          <line x1="29" y1="10" x2="29" y2="21" stroke={G} strokeWidth="2" strokeLinecap="round" />
+          <line x1="27" y1="10" x2="27" y2="21" stroke={G} strokeWidth="3.5" strokeLinecap="round" />
           {/* Braço interno direito do jaw */}
-          <line x1="35" y1="10" x2="35" y2="21" stroke={G} strokeWidth="2" strokeLinecap="round" />
+          <line x1="37" y1="10" x2="37" y2="21" stroke={G} strokeWidth="3.5" strokeLinecap="round" />
           {/* Fundo do jaw (forma o U) */}
-          <line x1="29" y1="21" x2="35" y2="21" stroke={G} strokeWidth="2" strokeLinecap="round" />
+          <line x1="27" y1="21" x2="37" y2="21" stroke={G} strokeWidth="3.5" strokeLinecap="round" />
         </g>
       </svg>
 
