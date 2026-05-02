@@ -29,6 +29,8 @@ def _tech_detail_response(t: dict, base_url: str) -> TechnicianDetailResponse:
     def upload_url(filename: Optional[str]) -> Optional[str]:
         if not filename:
             return None
+        if filename.startswith("http"):
+            return filename
         return f"{base_url}/uploads/{filename}"
 
     return TechnicianDetailResponse(
