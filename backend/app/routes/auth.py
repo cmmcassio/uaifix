@@ -1,10 +1,10 @@
+import io
 import re
-import uuid
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
-import aiofiles
+import cloudinary.uploader
+import app.core.cloudinary_config  # noqa: F401 — configura cloudinary ao importar
 from bson import ObjectId
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.security import OAuth2PasswordBearer
@@ -30,19 +30,14 @@ ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
 MAX_FILE_SIZE_MB = 5
 
 
-async def save_upload(file: UploadFile, prefix: str) -> str:
+async def upload_to_cloudinary(file: UploadFile, folder: str = "uaifix/technicians") -> str:
+    if (file.content_type or "") not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(400, "Formato inválido. Use JPG, PNG ou WebP.")
     content = await file.read()
     if len(content) > MAX_FILE_SIZE_MB * 1024 * 1024:
         raise HTTPException(400, f"Arquivo muito grande. Máximo {MAX_FILE_SIZE_MB}MB.")
-    if (file.content_type or "") not in ALLOWED_IMAGE_TYPES:
-        raise HTTPException(400, "Formato inválido. Use JPG, PNG ou WebP.")
-    ext = file.filename.rsplit(".", 1)[-1] if file.filename and "." in file.filename else "jpg"
-    filename = f"{prefix}_{uuid.uuid4().hex}.{ext}"
-    path = Path(settings.uploads_dir) / filename
-    path.parent.mkdir(parents=True, exist_ok=True)
-    async with aiofiles.open(path, "wb") as f:
-        await f.write(content)
-    return filename
+    result = cloudinary.uploader.upload(io.BytesIO(content), folder=folder)
+    return result["secure_url"]
 
 
 async def get_current_technician(token: str = Depends(oauth2_scheme), db=Depends(get_db)):
@@ -115,8 +110,8 @@ async def register_technician(
         field = "CPF" if existing.get("cpf") == cpf_clean else "e-mail"
         raise HTTPException(400, f"Já existe um cadastro com este {field}.")
 
-    selfie_filename = await save_upload(selfie, "selfie")
-    proof_filename = await save_upload(proof_of_address, "prova_end")
+    selfie_url = await upload_to_cloudinary(selfie)
+    proof_url = await upload_to_cloudinary(proof_of_address)
 
     client_ip = request.client.host if request.client else "unknown"
 
@@ -135,8 +130,8 @@ async def register_technician(
             city=city.strip(),
             state=state.upper().strip(),
         ),
-        selfie_filename=selfie_filename,
-        proof_of_address_filename=proof_filename,
+        selfie_filename=selfie_url,
+        proof_of_address_filename=proof_url,
         commercial_reference=CommercialReference(
             name=ref_name.strip(),
             contact=ref_contact.strip(),
