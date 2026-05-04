@@ -188,10 +188,30 @@ function ActiveJobCard({ call, onComplete, completing }) {
   )
 }
 
+const playAlert = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const beep = (delay) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 880
+      osc.type = 'sine'
+      gain.gain.setValueAtTime(0.4, ctx.currentTime + delay)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.6)
+      osc.start(ctx.currentTime + delay)
+      osc.stop(ctx.currentTime + delay + 0.6)
+    }
+    beep(0); beep(0.7); beep(1.4)
+  } catch(e) {}
+}
+
 export default function TechnicianDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const [tab, setTab] = useState('available')
+  const prevAvailableIds = useRef(new Set())
   const [available, setAvailable] = useState([])
   const [myJobs, setMyJobs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -214,6 +234,10 @@ export default function TechnicianDashboard() {
         api.get('/calls/my-jobs'),
       ])
       setAvailable(avRes.data)
+      const newIds = new Set(avRes.data.map(c => c.id))
+      const hasNew = avRes.data.some(c => !prevAvailableIds.current.has(c.id))
+      if (hasNew && prevAvailableIds.current.size > 0) playAlert()
+      prevAvailableIds.current = newIds
       setMyJobs(jobRes.data)
     } catch (err) {
       if (err.response?.status !== 401) {
