@@ -7,6 +7,7 @@ import cloudinary.uploader
 import app.core.cloudinary_config  # noqa: F401 — configura cloudinary ao importar
 from bson import ObjectId
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
 
 from app.core.config import settings
@@ -197,6 +198,40 @@ async def login_client(body: LoginRequest, db=Depends(get_db)):
 
     token = create_access_token({"sub": str(client["_id"]), "role": "client"})
     return LoginResponse(access_token=token, role="client", name=client["name"], status=client["status"])
+
+
+# ── Reset de senha ────────────────────────────────────────────────────────────
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+    reset_key: str
+
+@router.post("/reset-password")
+async def reset_password(body: ResetPasswordRequest, db=Depends(get_db)):
+    if body.reset_key != "uaifix-reset-2024":
+        raise HTTPException(403, "Chave inválida.")
+    if len(body.new_password) < 8:
+        raise HTTPException(400, "Senha deve ter no mínimo 8 caracteres.")
+
+    new_hash = hash_password(body.new_password)
+    email = body.email.lower().strip()
+
+    result = await db.technicians.update_one(
+        {"email": email},
+        {"$set": {"password_hash": new_hash, "updated_at": datetime.utcnow()}},
+    )
+    if result.matched_count:
+        return {"ok": True, "role": "technician"}
+
+    result = await db.clients.update_one(
+        {"email": email},
+        {"$set": {"password_hash": new_hash, "updated_at": datetime.utcnow()}},
+    )
+    if result.matched_count:
+        return {"ok": True, "role": "client"}
+
+    raise HTTPException(404, "E-mail não encontrado.")
 
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
