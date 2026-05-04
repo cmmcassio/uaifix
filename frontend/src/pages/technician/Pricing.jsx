@@ -49,6 +49,7 @@ export default function Pricing() {
     fridge_min: '', fridge_max: '',
     wash_min: '', wash_max: '',
   })
+  const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
@@ -69,12 +70,18 @@ export default function Pricing() {
           wash_min: data.repair_washing_machine?.min ?? '',
           wash_max: data.repair_washing_machine?.max ?? '',
         })
+        setPaymentMethods(data.payment_methods || [])
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
   const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }))
+
+  const togglePayment = (method) =>
+    setPaymentMethods((prev) =>
+      prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]
+    )
 
   const buildRange = (min, max) => {
     const mn = parseInt(min)
@@ -98,11 +105,14 @@ export default function Pricing() {
 
     setSaving(true)
     try {
-      await api.put('/technician/pricing', {
-        ...(diag && { diagnostic_fee: diag }),
-        ...(fridge && { repair_refrigerator: fridge }),
-        ...(wash && { repair_washing_machine: wash }),
-      })
+      await Promise.all([
+        api.put('/technician/pricing', {
+          ...(diag && { diagnostic_fee: diag }),
+          ...(fridge && { repair_refrigerator: fridge }),
+          ...(wash && { repair_washing_machine: wash }),
+        }),
+        api.put('/technician/payment-methods', { payment_methods: paymentMethods }),
+      ])
       setToast('Valores salvos com sucesso!')
       setTimeout(() => setToast(''), 3000)
     } catch {
@@ -165,6 +175,32 @@ export default function Pricing() {
             fieldMin="wash_min" fieldMax="wash_max"
             form={form} onChange={set}
           />
+
+          <div className="divider" />
+
+          <div className="space-y-3">
+            <label className="form-label">Formas de pagamento aceitas</label>
+            <div className="flex gap-3 flex-wrap">
+              {[
+                { id: 'pix',      label: 'PIX' },
+                { id: 'cartao',   label: 'Cartão' },
+                { id: 'dinheiro', label: 'Dinheiro' },
+              ].map(({ id, label }) => {
+                const checked = paymentMethods.includes(id)
+                return (
+                  <label key={id} className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => togglePayment(id)}
+                      className="w-4 h-4 rounded accent-gold cursor-pointer"
+                    />
+                    <span className="text-sm text-cream/70">{label}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
 
           {error && <div className="error-box">{error}</div>}
 

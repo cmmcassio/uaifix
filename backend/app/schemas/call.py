@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -45,7 +45,13 @@ class CallDetailResponse(BaseModel):
     client_name: str
     client_phone: str
     technician_name: Optional[str]
-    technician_photo_url: Optional[str]
+    technician_photo_url: Optional[str] = None
+    technician_avg_rating: Optional[float] = None
+    technician_ratings_count: int = 0
+    technician_calls_completed: int = 0
+    technician_phone: Optional[str] = None
+    technician_payment_methods: List[str] = []
+    pending_confirmation_expires_at: Optional[datetime] = None
     accepted_at: Optional[datetime]
     completed_at: Optional[datetime]
     rated_by_client: bool

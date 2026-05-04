@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -58,6 +58,7 @@ class TechnicianDB(BaseModel):
     last_offered_at: Optional[datetime] = None
     avg_rating: Optional[float] = None
     ratings_count: int = 0
+    payment_methods: List[str] = Field(default_factory=list)
     subscription_expires_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

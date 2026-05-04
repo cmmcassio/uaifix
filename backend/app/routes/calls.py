@@ -46,8 +46,9 @@ def _summary(c: dict) -> CallSummaryResponse:
     )
 
 
-def _detail(c: dict, technician_photo_url: Optional[str] = None) -> CallDetailResponse:
+def _detail(c: dict, tech_data: Optional[dict] = None) -> CallDetailResponse:
     addr = c.get("address", {})
+    tech = tech_data or {}
     return CallDetailResponse(
         id=str(c["_id"]),
         appliance_type=c["appliance_type"],
@@ -63,7 +64,12 @@ def _detail(c: dict, technician_photo_url: Optional[str] = None) -> CallDetailRe
         client_name=c.get("client_name", ""),
         client_phone=c.get("client_phone", ""),
         technician_name=c.get("technician_name"),
-        technician_photo_url=technician_photo_url,
+        technician_photo_url=tech.get("profile_photo_url"),
+        technician_avg_rating=tech.get("avg_rating"),
+        technician_ratings_count=tech.get("ratings_count", 0),
+        technician_calls_completed=tech.get("calls_completed", 0),
+        technician_phone=tech.get("phone"),
+        technician_payment_methods=tech.get("payment_methods", []),
         accepted_at=c.get("accepted_at"),
         completed_at=c.get("completed_at"),
         rated_by_client=c.get("rated_by_client", False),
@@ -138,15 +144,21 @@ async def my_calls(
 
     tech_ids = list({c["technician_id"] for c in calls
                      if c.get("technician_id") and c.get("status") in ("accepted", "in_progress")})
-    photo_map: dict = {}
+    tech_data_map: dict = {}
     if tech_ids:
         techs = await db.technicians.find(
             {"_id": {"$in": [ObjectId(tid) for tid in tech_ids]}},
-            {"_id": 1, "profile_photo_url": 1},
+            {"_id": 1, "profile_photo_url": 1, "avg_rating": 1, "ratings_count": 1,
+             "phone": 1, "payment_methods": 1},
         ).to_list(length=len(tech_ids))
-        photo_map = {str(t["_id"]): t.get("profile_photo_url") for t in techs}
+        for t in techs:
+            tech_data_map[str(t["_id"])] = dict(t)
+        for tid in tech_ids:
+            count = await db.calls.count_documents({"technician_id": tid, "status": "completed"})
+            if tid in tech_data_map:
+                tech_data_map[tid]["calls_completed"] = count
 
-    return [_detail(c, photo_map.get(c.get("technician_id"))) for c in calls]
+    return [_detail(c, tech_data_map.get(c.get("technician_id"))) for c in calls]
 
 
 @router.post("/{call_id}/cancel")
