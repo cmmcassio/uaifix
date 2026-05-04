@@ -45,6 +45,7 @@ class CallDetailResponse(BaseModel):
     client_name: str
     client_phone: str
     technician_name: Optional[str]
+    technician_photo_url: Optional[str]
     accepted_at: Optional[datetime]
     completed_at: Optional[datetime]
     rated_by_client: bool

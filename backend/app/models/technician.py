@@ -40,6 +40,7 @@ class TechnicianDB(BaseModel):
     address: Address
     selfie_filename: Optional[str] = None
     proof_of_address_filename: Optional[str] = None
+    profile_photo_url: Optional[str] = None
     commercial_reference: Optional[CommercialReference] = None
     terms_accepted_at: datetime
     terms_ip: str

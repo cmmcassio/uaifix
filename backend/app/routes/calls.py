@@ -1,5 +1,5 @@
 from datetime import date, datetime, time as time_type, timedelta
-from typing import List
+from typing import List, Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -46,7 +46,7 @@ def _summary(c: dict) -> CallSummaryResponse:
     )
 
 
-def _detail(c: dict) -> CallDetailResponse:
+def _detail(c: dict, technician_photo_url: Optional[str] = None) -> CallDetailResponse:
     addr = c.get("address", {})
     return CallDetailResponse(
         id=str(c["_id"]),
@@ -63,6 +63,7 @@ def _detail(c: dict) -> CallDetailResponse:
         client_name=c.get("client_name", ""),
         client_phone=c.get("client_phone", ""),
         technician_name=c.get("technician_name"),
+        technician_photo_url=technician_photo_url,
         accepted_at=c.get("accepted_at"),
         completed_at=c.get("completed_at"),
         rated_by_client=c.get("rated_by_client", False),
@@ -134,7 +135,18 @@ async def my_calls(
 ):
     cursor = db.calls.find({"client_id": str(client["_id"])}).sort("created_at", -1).limit(20)
     calls = await cursor.to_list(length=20)
-    return [_detail(c) for c in calls]
+
+    tech_ids = list({c["technician_id"] for c in calls
+                     if c.get("technician_id") and c.get("status") in ("accepted", "in_progress")})
+    photo_map: dict = {}
+    if tech_ids:
+        techs = await db.technicians.find(
+            {"_id": {"$in": [ObjectId(tid) for tid in tech_ids]}},
+            {"_id": 1, "profile_photo_url": 1},
+        ).to_list(length=len(tech_ids))
+        photo_map = {str(t["_id"]): t.get("profile_photo_url") for t in techs}
+
+    return [_detail(c, photo_map.get(c.get("technician_id"))) for c in calls]
 
 
 @router.post("/{call_id}/cancel")

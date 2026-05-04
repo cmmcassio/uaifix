@@ -220,6 +220,8 @@ export default function TechnicianDashboard() {
   const [completing, setCompleting] = useState(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const photoInputRef = useRef(null)
 
   useEffect(() => {
     if (!user || user.role !== 'technician') navigate('/tecnico/login')
@@ -302,6 +304,26 @@ export default function TechnicianDashboard() {
     }
   }
 
+  const uploadPhoto = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhoto(true)
+    try {
+      const form = new FormData()
+      form.append('photo', file)
+      await api.put('/technician/profile-photo', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setToast('Foto de perfil atualizada!')
+      setTimeout(() => setToast(''), 4000)
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao atualizar foto.')
+    } finally {
+      setUploadingPhoto(false)
+      e.target.value = ''
+    }
+  }
+
   const handleLogout = () => { logout(); navigate('/') }
 
   if (!user) return null
@@ -314,6 +336,23 @@ export default function TechnicianDashboard() {
           <p className="text-xs text-cream/40">Olá, {user.name?.split(' ')[0]}</p>
         </div>
         <div className="flex items-center gap-3">
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            className="hidden"
+            onChange={uploadPhoto}
+          />
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            className="text-xs text-cream/45 hover:text-cream/80 transition px-2.5 py-1.5 rounded-lg disabled:opacity-40"
+            style={{ border: '1px solid rgba(201,168,76,0.2)' }}
+            onMouseEnter={(e) => { if (!uploadingPhoto) e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.2)' }}
+          >
+            {uploadingPhoto ? '...' : 'Alterar foto'}
+          </button>
           <button
             onClick={() => navigate('/tecnico/precos')}
             className="text-xs text-cream/45 hover:text-cream/80 transition px-2.5 py-1.5 rounded-lg"

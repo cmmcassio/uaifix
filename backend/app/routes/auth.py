@@ -98,6 +98,7 @@ async def register_technician(
     ref_type: Optional[str] = Form(None),
     selfie: UploadFile = File(...),
     proof_of_address: UploadFile = File(...),
+    profile_photo: Optional[UploadFile] = File(None),
     db=Depends(get_db),
 ):
     cpf_clean = re.sub(r"\D", "", cpf)
@@ -113,6 +114,7 @@ async def register_technician(
 
     selfie_url = await upload_to_cloudinary(selfie)
     proof_url = await upload_to_cloudinary(proof_of_address)
+    profile_photo_url = await upload_to_cloudinary(profile_photo, folder="uaifix/profiles") if profile_photo and profile_photo.filename else None
 
     client_ip = request.client.host if request.client else "unknown"
 
@@ -133,6 +135,7 @@ async def register_technician(
         ),
         selfie_filename=selfie_url,
         proof_of_address_filename=proof_url,
+        profile_photo_url=profile_photo_url,
         commercial_reference=CommercialReference(
             name=ref_name.strip(),
             contact=ref_contact.strip(),

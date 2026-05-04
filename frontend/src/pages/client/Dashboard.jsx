@@ -191,9 +191,26 @@ export default function ClientDashboard() {
 
             {activeCall.status === 'accepted' && activeCall.technician_name && (
               <div className="rounded-xl p-3" style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)' }}>
-                <p className="text-xs font-semibold mb-0.5" style={{ color: '#4ADE80' }}>Técnico confirmado</p>
-                <p className="text-sm font-medium text-cream/80">{activeCall.technician_name}</p>
-                <p className="text-xs text-cream/40 mt-1">O técnico entrará em contato pelo seu WhatsApp cadastrado.</p>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#4ADE80' }}>Técnico confirmado</p>
+                <div className="flex items-center gap-3">
+                  {activeCall.technician_photo_url ? (
+                    <img
+                      src={activeCall.technician_photo_url}
+                      alt={activeCall.technician_name}
+                      className="w-12 h-12 rounded-full object-cover shrink-0"
+                      style={{ border: '2px solid #C9A84C' }}
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-lg font-bold"
+                         style={{ background: 'rgba(201,168,76,0.15)', color: '#C9A84C', border: '2px solid #C9A84C' }}>
+                      {activeCall.technician_name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-cream/80">{activeCall.technician_name}</p>
+                    <p className="text-xs text-cream/40 mt-0.5">O técnico entrará em contato pelo seu WhatsApp cadastrado.</p>
+                  </div>
+                </div>
               </div>
             )}
 
