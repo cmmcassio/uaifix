@@ -12,6 +12,8 @@ class ClientDB(BaseModel):
     phone: str
     password_hash: str
     address: Optional[Address] = None
+    email_verified: bool = False
+    email_verification_token: Optional[str] = None
     trust_level: str = "new"  # new | regular | reliable
     status: str = "active"
     calls_completed: int = 0

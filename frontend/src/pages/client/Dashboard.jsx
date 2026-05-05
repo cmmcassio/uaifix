@@ -29,6 +29,7 @@ export default function ClientDashboard() {
   const [calls, setCalls] = useState([])
   const [loadingCall, setLoadingCall] = useState(true)
   const [cancelling, setCancelling] = useState(false)
+  const [retrying, setRetrying] = useState(false)
   const [toast, setToast] = useState(location.state?.callCreated ? 'Chamado aberto! Buscando técnico.' : null)
 
   const [ratingStars, setRatingStars] = useState(0)
@@ -63,7 +64,7 @@ export default function ClientDashboard() {
     return () => clearInterval(id)
   }, [user])
 
-  const activeCall = calls.find((c) => ['open', 'accepted', 'in_progress'].includes(c.status))
+  const activeCall = calls.find((c) => ['open', 'no_technician_available', 'accepted', 'in_progress'].includes(c.status))
   const pendingRating = !activeCall && calls.find((c) => c.status === 'completed' && !c.rated_by_client)
 
   const cancel = async () => {
@@ -97,6 +98,20 @@ export default function ClientDashboard() {
       setRatingError(err.response?.data?.detail || 'Erro ao enviar avaliação.')
     } finally {
       setSubmittingRating(false)
+    }
+  }
+
+  const retry = async () => {
+    if (!activeCall) return
+    setRetrying(true)
+    try {
+      await api.post(`/calls/${activeCall.id}/retry`)
+      setToast('Buscando técnicos novamente...')
+      fetchCalls()
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Erro ao tentar novamente.')
+    } finally {
+      setRetrying(false)
     }
   }
 
@@ -161,6 +176,42 @@ export default function ClientDashboard() {
                 {submittingRating ? (
                   <div className="animate-spin h-4 w-4 rounded-full border-2" style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
                 ) : 'Enviar avaliação'}
+              </button>
+            </div>
+          </div>
+
+        ) : activeCall?.status === 'no_technician_available' ? (
+          <div className="card p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                   style={{ background: 'rgba(239,68,68,0.1)' }}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                     style={{ color: '#F87171' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-cream">Nenhum técnico disponível</h2>
+                <p className="text-sm text-cream/50 mt-0.5">
+                  {APPLIANCE_LABEL[activeCall.appliance_type]} {activeCall.brand} · {activeCall.symptom}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-cream/40">
+              Não encontramos técnicos disponíveis agora na sua região. Tente novamente em alguns minutos ou cancele o chamado.
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <button onClick={retry} disabled={retrying || cancelling} className="btn-gold w-full py-3">
+                {retrying ? (
+                  <div className="animate-spin h-4 w-4 rounded-full border-2 mx-auto"
+                       style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
+                ) : 'Tentar novamente'}
+              </button>
+              <button onClick={cancel} disabled={cancelling || retrying} className="btn-danger w-full py-2.5 text-sm">
+                {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
               </button>
             </div>
           </div>

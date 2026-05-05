@@ -22,6 +22,39 @@ class UpdatePaymentMethodsRequest(BaseModel):
 router = APIRouter(prefix="/technician", tags=["technician"])
 
 
+@router.get("/me")
+async def get_me(
+    technician=Depends(get_current_technician),
+    db=Depends(get_db),
+):
+    tech = await db.technicians.find_one({"_id": technician["_id"]})
+    return {
+        "subscription_status": tech.get("subscription_status", "trial"),
+        "trial_started_at": tech.get("trial_started_at"),
+        "trial_calls_accepted": tech.get("trial_calls_accepted", 0),
+        "payment_proof_url": tech.get("payment_proof_url"),
+        "suspended_until": tech.get("suspended_until"),
+    }
+
+
+@router.post("/upload-payment-proof")
+async def upload_payment_proof(
+    proof: UploadFile = File(...),
+    technician=Depends(get_current_technician),
+    db=Depends(get_db),
+):
+    url = await upload_to_cloudinary(proof, folder="uaifix/payments")
+    await db.technicians.update_one(
+        {"_id": technician["_id"]},
+        {"$set": {
+            "payment_proof_url": url,
+            "subscription_status": "pending_payment",
+            "updated_at": datetime.utcnow(),
+        }},
+    )
+    return {"payment_proof_url": url}
+
+
 @router.put("/profile-photo")
 async def update_profile_photo(
     photo: UploadFile = File(...),

@@ -222,6 +222,9 @@ export default function TechnicianDashboard() {
   const [toast, setToast] = useState('')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const photoInputRef = useRef(null)
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null)
+  const [uploadingProof, setUploadingProof] = useState(false)
+  const proofInputRef = useRef(null)
 
   useEffect(() => {
     if (!user || user.role !== 'technician') navigate('/tecnico/login')
@@ -250,7 +253,11 @@ export default function TechnicianDashboard() {
     }
   }, [])
 
-  useEffect(() => { if (user) fetchAll() }, [user, fetchAll])
+  useEffect(() => {
+    if (!user) return
+    fetchAll()
+    api.get('/technician/me').then(({ data }) => setSubscriptionInfo(data)).catch(() => {})
+  }, [user, fetchAll])
 
   useEffect(() => {
     if (!user) return
@@ -324,6 +331,28 @@ export default function TechnicianDashboard() {
     }
   }
 
+  const uploadProof = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingProof(true)
+    try {
+      const form = new FormData()
+      form.append('proof', file)
+      await api.post('/technician/upload-payment-proof', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setToast('Comprovante enviado! Aguarde a confirmação do admin.')
+      setTimeout(() => setToast(''), 5000)
+      const { data } = await api.get('/technician/me')
+      setSubscriptionInfo(data)
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao enviar comprovante.')
+    } finally {
+      setUploadingProof(false)
+      e.target.value = ''
+    }
+  }
+
   const handleLogout = () => { logout(); navigate('/') }
 
   if (!user) return null
@@ -380,6 +409,41 @@ export default function TechnicianDashboard() {
       </header>
 
       {toast && <div className="toast-banner">{toast}</div>}
+
+      {subscriptionInfo?.subscription_status === 'trial' && subscriptionInfo?.trial_started_at && (() => {
+        const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - new Date(subscriptionInfo.trial_started_at)) / 86400000))
+        return (
+          <div className="px-4 py-2.5 text-sm text-center font-medium"
+               style={{ background: 'rgba(201,168,76,0.12)', color: '#C9A84C', borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
+            Período de teste: {daysLeft} {daysLeft === 1 ? 'dia restante' : 'dias restantes'}
+          </div>
+        )
+      })()}
+
+      {subscriptionInfo?.subscription_status === 'expired' && (
+        <div className="px-4 py-3 space-y-2"
+             style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)' }}>
+          <p className="text-sm font-medium text-center" style={{ color: '#F87171' }}>
+            Assinatura expirada. Faça o pagamento para continuar recebendo chamados.
+          </p>
+          <input ref={proofInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
+                 className="hidden" onChange={uploadProof} />
+          <button
+            onClick={() => proofInputRef.current?.click()}
+            disabled={uploadingProof}
+            className="btn-gold w-full py-2 text-sm disabled:opacity-50"
+          >
+            {uploadingProof ? 'Enviando...' : 'Enviar comprovante PIX'}
+          </button>
+        </div>
+      )}
+
+      {subscriptionInfo?.subscription_status === 'pending_payment' && (
+        <div className="px-4 py-2.5 text-sm text-center font-medium"
+             style={{ background: 'rgba(234,179,8,0.1)', color: '#CA8A04', borderBottom: '1px solid rgba(234,179,8,0.2)' }}>
+          Comprovante enviado — aguardando confirmação do admin.
+        </div>
+      )}
 
       <div className="app-header border-b" style={{ borderColor: 'rgba(201,168,76,0.12)' }}>
         <div className="max-w-2xl mx-auto flex">

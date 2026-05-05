@@ -10,6 +10,7 @@ from app.dispatch import (
     _is_eligible,
     _assign_offer,
     _update_tech_avg_rating,
+    _warn_technician,
     trigger_dispatch_for_call,
 )
 from app.models.call import ServiceCallDB
@@ -106,7 +107,7 @@ async def create_call(
 
     existing = await db.calls.find_one({
         "client_id": str(client["_id"]),
-        "status": {"$in": ["open", "accepted", "in_progress"]},
+        "status": {"$in": ["open", "accepted", "in_progress", "no_technician_available"]},
     })
     if existing:
         raise HTTPException(400, "Você já tem um chamado em aberto. Cancele-o antes de abrir outro.")
@@ -173,7 +174,8 @@ async def cancel_call(
         raise HTTPException(400, "ID inválido.")
 
     result = await db.calls.update_one(
-        {"_id": oid, "client_id": str(client["_id"]), "status": "open"},
+        {"_id": oid, "client_id": str(client["_id"]),
+         "status": {"$in": ["open", "no_technician_available"]}},
         {"$set": {
             "status": "cancelled",
             "cancelled_at": datetime.utcnow(),
@@ -184,6 +186,36 @@ async def cancel_call(
         raise HTTPException(400, "Chamado não pode ser cancelado.")
 
     return {"message": "Chamado cancelado."}
+
+
+@router.post("/{call_id}/retry")
+async def retry_call(
+    call_id: str,
+    client=Depends(get_current_client),
+    db=Depends(get_db),
+):
+    try:
+        oid = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido.")
+
+    now = datetime.utcnow()
+    result = await db.calls.update_one(
+        {"_id": oid, "client_id": str(client["_id"]), "status": "no_technician_available"},
+        {"$set": {
+            "status": "open",
+            "declined_by": [],
+            "offered_to": None,
+            "offer_expires_at": None,
+            "no_technician_at": None,
+            "updated_at": now,
+        }},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(400, "Chamado não pode ser reaberto.")
+
+    await trigger_dispatch_for_call(db, call_id)
+    return {"message": "Buscando técnicos novamente..."}
 
 
 @router.post("/{call_id}/rate")
@@ -342,6 +374,11 @@ async def complete_call(
     )
     if result.matched_count == 0:
         raise HTTPException(400, "Chamado não encontrado ou não pode ser concluído.")
+
+    await db.technicians.update_one(
+        {"_id": technician["_id"]},
+        {"$inc": {"calls_completed_count": 1}},
+    )
 
     return {"message": "Chamado concluído com sucesso!"}
 

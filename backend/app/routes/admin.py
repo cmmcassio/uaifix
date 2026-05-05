@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from bson import ObjectId
@@ -25,7 +25,7 @@ def _tech_response(t: dict) -> TechnicianResponse:
     )
 
 
-def _tech_detail_response(t: dict, base_url: str) -> TechnicianDetailResponse:
+def _tech_detail_response(t: dict, base_url: str) -> dict:
     def upload_url(filename: Optional[str]) -> Optional[str]:
         if not filename:
             return None
@@ -33,23 +33,25 @@ def _tech_detail_response(t: dict, base_url: str) -> TechnicianDetailResponse:
             return filename
         return f"{base_url}/uploads/{filename}"
 
-    return TechnicianDetailResponse(
-        id=str(t["_id"]),
-        name=t["name"],
-        cpf=t["cpf"],
-        email=t["email"],
-        phone=t["phone"],
-        address=t["address"],
-        commercial_reference=t["commercial_reference"],
-        selfie_url=upload_url(t.get("selfie_filename")),
-        proof_of_address_url=upload_url(t.get("proof_of_address_filename")),
-        terms_accepted_at=t["terms_accepted_at"],
-        status=t["status"],
-        rejection_reason=t.get("rejection_reason"),
-        approved_at=t.get("approved_at"),
-        rejected_at=t.get("rejected_at"),
-        created_at=t["created_at"],
-    )
+    return {
+        "id": str(t["_id"]),
+        "name": t["name"],
+        "cpf": t["cpf"],
+        "email": t["email"],
+        "phone": t["phone"],
+        "address": t["address"],
+        "commercial_reference": t.get("commercial_reference"),
+        "selfie_url": upload_url(t.get("selfie_filename")),
+        "proof_of_address_url": upload_url(t.get("proof_of_address_filename")),
+        "terms_accepted_at": t["terms_accepted_at"],
+        "status": t["status"],
+        "rejection_reason": t.get("rejection_reason"),
+        "approved_at": t.get("approved_at"),
+        "rejected_at": t.get("rejected_at"),
+        "created_at": t["created_at"],
+        "subscription_status": t.get("subscription_status", "trial"),
+        "payment_proof_url": t.get("payment_proof_url"),
+    }
 
 
 @router.get("/technicians", response_model=List[TechnicianResponse])
@@ -66,7 +68,7 @@ async def list_technicians(
     return [_tech_response(t) for t in techs]
 
 
-@router.get("/technicians/{tech_id}", response_model=TechnicianDetailResponse)
+@router.get("/technicians/{tech_id}")
 async def get_technician(
     tech_id: str,
     _admin=Depends(get_current_admin),
@@ -139,3 +141,53 @@ async def reject_technician(
     if result.matched_count == 0:
         raise HTTPException(404, "Técnico pendente não encontrado")
     return {"message": "Técnico reprovado"}
+
+
+@router.post("/technicians/{tech_id}/confirm-payment")
+async def confirm_payment(
+    tech_id: str,
+    _admin=Depends(get_current_admin),
+    db=Depends(get_db),
+):
+    try:
+        oid = ObjectId(tech_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido")
+
+    now = datetime.utcnow()
+    result = await db.technicians.update_one(
+        {"_id": oid},
+        {"$set": {
+            "subscription_status": "active",
+            "subscription_expires_at": now + timedelta(days=30),
+            "payment_proof_url": None,
+            "updated_at": now,
+        }},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(404, "Técnico não encontrado")
+    return {"message": "Pagamento confirmado. Assinatura ativada por 30 dias."}
+
+
+@router.post("/technicians/{tech_id}/reject-payment")
+async def reject_payment(
+    tech_id: str,
+    _admin=Depends(get_current_admin),
+    db=Depends(get_db),
+):
+    try:
+        oid = ObjectId(tech_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido")
+
+    result = await db.technicians.update_one(
+        {"_id": oid},
+        {"$set": {
+            "subscription_status": "expired",
+            "payment_proof_url": None,
+            "updated_at": datetime.utcnow(),
+        }},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(404, "Técnico não encontrado")
+    return {"message": "Pagamento rejeitado."}

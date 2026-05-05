@@ -99,6 +99,34 @@ export default function TechnicianDetail() {
       .finally(() => setLoading(false))
   }, [id, navigate])
 
+  const confirmPayment = async () => {
+    setActionLoading(true)
+    setFeedback(null)
+    try {
+      await api.post(`/admin/technicians/${id}/confirm-payment`)
+      setTech((t) => ({ ...t, subscription_status: 'active', payment_proof_url: null }))
+      setFeedback({ type: 'success', msg: 'Pagamento confirmado. Assinatura ativada por 30 dias.' })
+    } catch (err) {
+      setFeedback({ type: 'error', msg: err.response?.data?.detail || 'Erro ao confirmar pagamento.' })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const rejectPayment = async () => {
+    setActionLoading(true)
+    setFeedback(null)
+    try {
+      await api.post(`/admin/technicians/${id}/reject-payment`)
+      setTech((t) => ({ ...t, subscription_status: 'expired', payment_proof_url: null }))
+      setFeedback({ type: 'success', msg: 'Comprovante rejeitado.' })
+    } catch (err) {
+      setFeedback({ type: 'error', msg: err.response?.data?.detail || 'Erro ao rejeitar pagamento.' })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const approve = async () => {
     setActionLoading(true)
     setFeedback(null)
@@ -250,6 +278,37 @@ export default function TechnicianDetail() {
           <div className="error-box rounded-xl">
             <span className="font-semibold">Motivo da reprovação:</span> {tech.rejection_reason}
           </div>
+        )}
+
+        {tech.payment_proof_url && tech.subscription_status === 'pending_payment' && (
+          <Section title="Comprovante de Pagamento">
+            <DocImage label="Comprovante enviado pelo técnico" url={tech.payment_proof_url} />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={confirmPayment}
+                disabled={actionLoading}
+                className="btn-success flex-1 py-3"
+              >
+                {actionLoading ? (
+                  <div className="spinner h-4 w-4 border-2" />
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Confirmar pagamento
+                  </>
+                )}
+              </button>
+              <button
+                onClick={rejectPayment}
+                disabled={actionLoading}
+                className="btn-danger flex-1 py-3"
+              >
+                Rejeitar comprovante
+              </button>
+            </div>
+          </Section>
         )}
 
         <Section title="Documentos">

@@ -54,12 +54,16 @@ class TechnicianDB(BaseModel):
     trial_calls_accepted: int = 0
     daily_calls_count: int = 0
     warnings_count: int = 0
+    suspended_until: Optional[datetime] = None
+    calls_completed_count: int = 0
     pricing: Optional[TechnicianPricing] = None
     last_offered_at: Optional[datetime] = None
     avg_rating: Optional[float] = None
     ratings_count: int = 0
     payment_methods: List[str] = Field(default_factory=list)
+    subscription_status: str = "trial"  # trial | pending_payment | active | expired
     subscription_expires_at: Optional[datetime] = None
+    payment_proof_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     role: str = "technician"

@@ -2,11 +2,12 @@ import io
 import re
 from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
 import cloudinary.uploader
 import app.core.cloudinary_config  # noqa: F401 — configura cloudinary ao importar
 from bson import ObjectId
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
 
@@ -171,26 +172,34 @@ async def register_client(body: ClientRegisterRequest, db=Depends(get_db)):
     if existing:
         raise HTTPException(400, "Já existe uma conta com este e-mail.")
 
-    address = Address(
-        zip_code=re.sub(r"\D", "", body.zip_code),
-        street=body.street.strip(),
-        number=body.number.strip(),
-        complement=body.complement.strip() if body.complement else None,
-        neighborhood=body.neighborhood.strip(),
-        city=body.city.strip(),
-        state=body.state.upper().strip(),
-    )
-
+    verification_token = str(uuid4())
     doc = ClientDB(
         name=body.name.strip(),
         email=email,
         phone=re.sub(r"\D", "", body.phone),
         password_hash=hash_password(body.password),
-        address=address,
+        email_verified=False,
+        email_verification_token=verification_token,
     ).model_dump()
 
     result = await db.clients.insert_one(doc)
-    return {"id": str(result.inserted_id), "message": "Conta criada com sucesso!"}
+    return {
+        "id": str(result.inserted_id),
+        "message": "Conta criada! Verifique seu e-mail para ativar a conta.",
+        "verification_token": verification_token,
+    }
+
+
+@router.get("/verify-email")
+async def verify_email(token: str = Query(...), db=Depends(get_db)):
+    client = await db.clients.find_one({"email_verification_token": token})
+    if not client:
+        raise HTTPException(400, "Token inválido ou expirado.")
+    await db.clients.update_one(
+        {"_id": client["_id"]},
+        {"$set": {"email_verified": True, "email_verification_token": None}},
+    )
+    return {"ok": True, "message": "E-mail verificado com sucesso"}
 
 
 @router.post("/login/client", response_model=LoginResponse)
