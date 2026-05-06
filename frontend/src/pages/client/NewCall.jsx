@@ -40,13 +40,21 @@ const SYMPTOMS = {
 
 function fmt(v) { return `R$ ${v}` }
 
+function maskCEP(v) {
+  return v.replace(/\D/g, '').slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2')
+}
+
 export default function NewCall() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ appliance_type: '', brand: '', symptom: '', description: '' })
+  const [form, setForm] = useState({
+    appliance_type: '', brand: '', symptom: '', description: '',
+    zip_code: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '',
+  })
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [globalError, setGlobalError] = useState('')
   const [pricing, setPricing] = useState(null)
+  const [cepLoading, setCepLoading] = useState(false)
 
   useEffect(() => {
     if (!form.appliance_type) { setPricing(null); return }
@@ -57,6 +65,30 @@ export default function NewCall() {
       })
       .catch(() => setPricing(null))
   }, [form.appliance_type])
+
+  const fetchCEP = async (raw) => {
+    const digits = raw.replace(/\D/g, '')
+    if (digits.length !== 8) return
+    setCepLoading(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        setForm((prev) => ({
+          ...prev,
+          street: data.logradouro || prev.street,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.localidade || prev.city,
+          state: data.uf || prev.state,
+        }))
+        setErrors((prev) => ({ ...prev, street: '', neighborhood: '', city: '', state: '' }))
+      }
+    } catch {
+      // ViaCEP falhou — usuário preenche manualmente
+    } finally {
+      setCepLoading(false)
+    }
+  }
 
   const set = (field, value) => {
     setForm((prev) => {
@@ -72,6 +104,12 @@ export default function NewCall() {
     if (!form.appliance_type) e.appliance_type = 'Selecione o aparelho'
     if (!form.brand.trim()) e.brand = 'Informe a marca'
     if (!form.symptom) e.symptom = 'Selecione o problema'
+    if (form.zip_code.replace(/\D/g, '').length !== 8) e.zip_code = 'CEP inválido'
+    if (!form.street.trim()) e.street = 'Logradouro obrigatório'
+    if (!form.number.trim()) e.number = 'Número obrigatório'
+    if (!form.neighborhood.trim()) e.neighborhood = 'Bairro obrigatório'
+    if (!form.city.trim()) e.city = 'Cidade obrigatória'
+    if (!form.state.trim()) e.state = 'Estado obrigatório'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -86,6 +124,13 @@ export default function NewCall() {
         brand: form.brand.trim(),
         symptom: form.symptom,
         description: form.description.trim() || undefined,
+        zip_code: form.zip_code.replace(/\D/g, ''),
+        street: form.street.trim(),
+        number: form.number.trim(),
+        complement: form.complement.trim() || undefined,
+        neighborhood: form.neighborhood.trim(),
+        city: form.city.trim(),
+        state: form.state.toUpperCase().trim(),
       })
       navigate('/cliente/dashboard', { state: { callCreated: true } })
     } catch (err) {
@@ -203,6 +248,104 @@ export default function NewCall() {
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
             />
+          </div>
+
+          <div className="space-y-4">
+            <label className="form-label">Endereço do atendimento</label>
+
+            <div>
+              <label className="form-label">
+                CEP <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span>
+              </label>
+              <div className="relative mt-1">
+                <input
+                  className={`form-input${errors.zip_code ? ' error' : ''}`}
+                  placeholder="00000-000"
+                  value={maskCEP(form.zip_code)}
+                  onChange={(e) => {
+                    set('zip_code', e.target.value)
+                    fetchCEP(e.target.value)
+                  }}
+                />
+                {cepLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin h-4 w-4 rounded-full border-2"
+                         style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }} />
+                  </div>
+                )}
+              </div>
+              {errors.zip_code && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{errors.zip_code}</p>}
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <label className="form-label">Logradouro <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span></label>
+                <input
+                  className={`form-input mt-1${errors.street ? ' error' : ''}`}
+                  placeholder="Rua, Av..."
+                  value={form.street}
+                  onChange={(e) => set('street', e.target.value)}
+                />
+                {errors.street && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{errors.street}</p>}
+              </div>
+              <div>
+                <label className="form-label">Número <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span></label>
+                <input
+                  className={`form-input mt-1${errors.number ? ' error' : ''}`}
+                  placeholder="123"
+                  value={form.number}
+                  onChange={(e) => set('number', e.target.value)}
+                />
+                {errors.number && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{errors.number}</p>}
+              </div>
+            </div>
+
+            <div>
+              <label className="form-label">
+                Complemento <span className="text-cream/25 font-normal normal-case">(opcional)</span>
+              </label>
+              <input
+                className="form-input mt-1"
+                placeholder="Apto, Bloco..."
+                value={form.complement}
+                onChange={(e) => set('complement', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Bairro <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span></label>
+              <input
+                className={`form-input mt-1${errors.neighborhood ? ' error' : ''}`}
+                placeholder="Bairro"
+                value={form.neighborhood}
+                onChange={(e) => set('neighborhood', e.target.value)}
+              />
+              {errors.neighborhood && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{errors.neighborhood}</p>}
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <label className="form-label">Cidade <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span></label>
+                <input
+                  className={`form-input mt-1${errors.city ? ' error' : ''}`}
+                  placeholder="Cidade"
+                  value={form.city}
+                  onChange={(e) => set('city', e.target.value)}
+                />
+                {errors.city && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{errors.city}</p>}
+              </div>
+              <div>
+                <label className="form-label">UF <span style={{ color: 'rgba(239,68,68,0.8)' }}>*</span></label>
+                <input
+                  className={`form-input mt-1${errors.state ? ' error' : ''}`}
+                  placeholder="MG"
+                  maxLength={2}
+                  value={form.state}
+                  onChange={(e) => set('state', e.target.value.toUpperCase())}
+                />
+                {errors.state && <p className="mt-1 text-xs" style={{ color: '#F87171' }}>{errors.state}</p>}
+              </div>
+            </div>
           </div>
 
           {globalError && <div className="error-box">{globalError}</div>}
