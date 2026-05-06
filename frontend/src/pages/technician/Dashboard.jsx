@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../api/client'
+import Logo from '../../components/Logo'
 
 const APPLIANCE_LABEL = { refrigerator: 'Geladeira', washing_machine: 'Máquina de lavar' }
 const APPLIANCE_ICON = {
@@ -15,6 +16,23 @@ const APPLIANCE_ICON = {
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
         d="M12 16.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9zM3 6.75A2.25 2.25 0 015.25 4.5h13.5A2.25 2.25 0 0121 6.75v10.5A2.25 2.25 0 0118.75 19.5H5.25A2.25 2.25 0 013 17.25V6.75z" />
+    </svg>
+  ),
+}
+
+const APPLIANCE_ICON_64 = {
+  refrigerator: (
+    <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="#999" strokeWidth={0.9}>
+      <path strokeLinecap="round" strokeLinejoin="round"
+        d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h12a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18v-2.25z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 7.5v.75M8.25 16.5v1.5" />
+    </svg>
+  ),
+  washing_machine: (
+    <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="#999" strokeWidth={0.9}>
+      <path strokeLinecap="round" strokeLinejoin="round"
+        d="M12 16.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9zM3 6.75A2.25 2.25 0 015.25 4.5h13.5A2.25 2.25 0 0121 6.75v10.5A2.25 2.25 0 0118.75 19.5H5.25A2.25 2.25 0 013 17.25V6.75z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6.75h.75M8.25 6.75H9M10.5 12a1.5 1.5 0 012.5-1.118" />
     </svg>
   ),
 }
@@ -57,53 +75,85 @@ function useCountdown(expiresAt, onExpired) {
   return secsLeft
 }
 
-function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpired }) {
+const STAR_PATH = "M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
+
+function Stars({ value, size = 14, filled = true }) {
+  const rounded = Math.round(value)
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <svg key={i} width={size} height={size} viewBox="0 0 24 24"
+             fill={(!filled || i <= rounded) ? '#C9A84C' : 'none'} stroke="#C9A84C" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d={STAR_PATH} />
+        </svg>
+      ))}
+    </div>
+  )
+}
+
+function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpired, techPricing, techStats }) {
   const secsLeft = useCountdown(call.offer_expires_at, onExpired)
   const urgent = secsLeft !== null && secsLeft <= 30
 
+  const priceRange = call.appliance_type === 'refrigerator'
+    ? techPricing?.repair_refrigerator
+    : techPricing?.repair_washing_machine
+  const priceDisplay = priceRange ? `R$ ${priceRange.min},00 – R$ ${priceRange.max},00` : null
+
+  const avgRating = techStats?.avg_rating ?? 0
+  const ratingCount = techStats?.ratings_count ?? 0
+  const completedCount = techStats?.calls_completed_count ?? 0
+  const initial = (call.client_name ?? 'C').charAt(0).toUpperCase()
+  const addressParts = [call.street, call.neighborhood, call.city].filter(Boolean)
+
   return (
-    <div className={urgent ? 'card-danger p-4 space-y-3' : 'card p-4 space-y-3'}>
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-             style={{ background: 'rgba(201,168,76,0.1)', color: '#C9A84C' }}>
-          {APPLIANCE_ICON[call.appliance_type]}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-cream">
-            {APPLIANCE_LABEL[call.appliance_type]} {call.brand}
-          </p>
-          <p className="text-sm text-cream/60 mt-0.5">{call.symptom}</p>
-          {call.description && (
-            <p className="text-xs text-cream/35 mt-1 line-clamp-2">{call.description}</p>
+    <div>
+      {/* ── CARD SERVIÇO ── */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <Logo size="sm" showTagline={false} />
+          {secsLeft !== null && (
+            <span className="text-xs font-bold tabular-nums px-2.5 py-1 rounded-full"
+                  style={{
+                    background: urgent ? 'rgba(239,68,68,0.15)' : 'rgba(201,168,76,0.12)',
+                    color: urgent ? '#F87171' : '#C9A84C',
+                    animation: urgent ? 'pulse 1s infinite' : 'none',
+                  }}>
+              {secsLeft}s
+            </span>
           )}
         </div>
-      </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-xs text-cream/35">
-          <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-          </svg>
-          {call.neighborhood}, {call.city} · {timeAgo(call.created_at)}
+        <div className="flex justify-center mb-3">
+          {APPLIANCE_ICON_64[call.appliance_type]}
         </div>
 
-        {secsLeft !== null && (
-          <span className="text-xs font-bold tabular-nums px-2 py-0.5 rounded-full"
-                style={{
-                  background: urgent ? 'rgba(239,68,68,0.15)' : 'rgba(201,168,76,0.12)',
-                  color: urgent ? '#F87171' : '#C9A84C',
-                  animation: urgent ? 'pulse 1s infinite' : 'none',
-                }}>
-            {secsLeft}s
-          </span>
+        <p className="text-center text-lg font-bold text-cream leading-tight">
+          {APPLIANCE_LABEL[call.appliance_type]}{call.brand ? ` · ${call.brand}` : ''}
+        </p>
+
+        {addressParts.length > 0 && (
+          <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-cream/45">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+            <span className="truncate">{addressParts.join(', ')}</span>
+          </div>
+        )}
+
+        {priceDisplay && (
+          <p className="text-center text-sm font-bold mt-3" style={{ color: '#16a34a' }}>
+            Preço: {priceDisplay}
+          </p>
         )}
       </div>
 
+      {/* ── COUNTDOWN BAR ── */}
       {secsLeft !== null && (
-        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(240,237,228,0.06)' }}>
+        <div className="w-full h-1.5" style={{ background: 'rgba(240,237,228,0.05)' }}>
           <div
-            className="h-full rounded-full transition-all duration-1000"
+            className="h-full transition-all duration-1000"
             style={{
               width: `${Math.min(100, (secsLeft / 120) * 100)}%`,
               background: urgent ? '#F87171' : '#C9A84C',
@@ -112,22 +162,91 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
         </div>
       )}
 
-      <div className="flex gap-2">
+      {/* ── CARD CLIENTE ── */}
+      <div className="card p-5 mt-3">
+        <p className="text-sm font-bold mb-4" style={{ color: '#a07428' }}>
+          Informações do cliente
+        </p>
+
+        <div className="flex items-start gap-3">
+          <div className="flex items-center justify-center rounded-full text-xl font-bold text-cream shrink-0"
+               style={{
+                 width: 48, height: 48,
+                 border: '3px solid rgba(201,168,76,0.65)',
+                 background: 'rgba(201,168,76,0.1)',
+               }}>
+            {initial}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-cream text-base leading-tight">{call.client_name ?? 'Cliente'}</p>
+
+            {call.client_email_verified && (
+              <div className="flex items-center gap-1 mt-1">
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                     style={{ color: '#3b82f6' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-xs font-medium" style={{ color: '#3b82f6' }}>Cliente verificado</span>
+              </div>
+            )}
+
+            <div className="mt-1.5">
+              <Stars value={5} size={12} filled />
+            </div>
+          </div>
+        </div>
+
+        {(call.description || call.symptom) && (
+          <p className="text-sm text-cream/50 leading-relaxed line-clamp-3 mt-4">
+            {call.description || call.symptom}
+          </p>
+        )}
+      </div>
+
+      {/* ── CARD PERFORMANCE ── */}
+      <div className="card p-5 mt-3">
+        <p className="text-sm font-bold italic text-cream mb-4">Performance</p>
+
+        <div className="flex items-center">
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <Stars value={avgRating} size={16} />
+            <p className="text-base font-bold text-cream tabular-nums">
+              {avgRating > 0 ? `${avgRating.toFixed(1)}/5.0` : '—/5.0'}
+            </p>
+            <p className="text-[10px] text-cream/40">Avaliações ({ratingCount})</p>
+          </div>
+
+          <div className="self-stretch w-px mx-4" style={{ background: 'rgba(240,237,228,0.1)' }} />
+
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <p className="text-3xl font-bold text-cream tabular-nums leading-none">{completedCount}</p>
+            <p className="text-[10px] text-cream/40 text-center">Serviços realizados</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── BOTÕES ── */}
+      <div className="flex gap-3 mt-4">
         <button
           onClick={() => onDecline(call.id)}
           disabled={declining === call.id || accepting === call.id}
-          className="btn-muted flex-1 py-2.5 text-sm"
+          className="btn-muted py-3.5 text-sm font-semibold"
+          style={{ borderRadius: 24, width: '35%' }}
         >
-          {declining === call.id ? '...' : 'Recusar'}
+          {declining === call.id ? '...' : 'Rejeitar'}
         </button>
         <button
           onClick={() => onAccept(call.id)}
           disabled={accepting === call.id || declining === call.id}
-          className="btn-gold flex-[2] py-2.5 text-sm"
+          className="btn-gold py-3.5 text-sm font-semibold"
+          style={{ borderRadius: 24, width: '60%' }}
         >
           {accepting === call.id ? (
-            <div className="animate-spin h-4 w-4 rounded-full border-2" style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
-          ) : 'Aceitar chamado'}
+            <div className="animate-spin h-4 w-4 rounded-full border-2 mx-auto"
+                 style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
+          ) : 'Aceitar'}
         </button>
       </div>
     </div>
@@ -225,6 +344,7 @@ export default function TechnicianDashboard() {
   const [subscriptionInfo, setSubscriptionInfo] = useState(null)
   const [uploadingProof, setUploadingProof] = useState(false)
   const proofInputRef = useRef(null)
+  const [techPricing, setTechPricing] = useState(null)
 
   useEffect(() => {
     if (!user || user.role !== 'technician') navigate('/tecnico/login')
@@ -257,6 +377,7 @@ export default function TechnicianDashboard() {
     if (!user) return
     fetchAll()
     api.get('/technician/me').then(({ data }) => setSubscriptionInfo(data)).catch(() => {})
+    api.get('/technician/pricing').then(({ data }) => setTechPricing(data)).catch(() => {})
   }, [user, fetchAll])
 
   useEffect(() => {
@@ -501,6 +622,8 @@ export default function TechnicianDashboard() {
                 accepting={accepting}
                 declining={declining}
                 onExpired={() => fetchAll(true)}
+                techPricing={techPricing}
+                techStats={subscriptionInfo}
               />
             ))
           )

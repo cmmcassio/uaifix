@@ -9,8 +9,8 @@ export default {
           light: '#E8C96E',
           dark: '#8B6914',
         },
-        // cream agora é o texto principal (marrom escuro quente)
-        cream: '#2C2416',
+        // cream agora é o texto principal (preto suave, máxima legibilidade)
+        cream: '#1A1A1A',
         // dark agora aponta para os beges de fundo
         dark: {
           base: '#F5F0E8',
