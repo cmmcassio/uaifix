@@ -7,7 +7,7 @@ from uuid import uuid4
 import cloudinary.uploader
 import app.core.cloudinary_config  # noqa: F401 — configura cloudinary ao importar
 from bson import ObjectId
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
 
@@ -21,7 +21,7 @@ from app.core.security import (
 )
 from app.database import get_db
 from app.models.client import ClientDB
-from app.models.technician import Address, CommercialReference, TechnicianDB
+from app.models.technician import Address, TechnicianDB
 from app.schemas.client import ClientRegisterRequest
 from app.schemas.technician import LoginRequest, LoginResponse
 
@@ -79,75 +79,66 @@ async def get_current_admin(token: str = Depends(oauth2_scheme)):
 
 # ── Técnico ───────────────────────────────────────────────────────────────────
 
+class TechnicianRegisterRequest(BaseModel):
+    name: str
+    cpf: str
+    email: str
+    phone: str
+    password: str
+    zip_code: str
+    street: str
+    number: str
+    complement: Optional[str] = None
+    neighborhood: str
+    city: str
+    state: str
+
+
 @router.post("/register/technician", status_code=201)
 async def register_technician(
     request: Request,
-    name: str = Form(...),
-    cpf: str = Form(...),
-    email: str = Form(...),
-    phone: str = Form(...),
-    password: str = Form(...),
-    zip_code: str = Form(...),
-    street: str = Form(...),
-    number: str = Form(...),
-    complement: Optional[str] = Form(None),
-    neighborhood: str = Form(...),
-    city: str = Form(...),
-    state: str = Form(...),
-    ref_name: Optional[str] = Form(None),
-    ref_contact: Optional[str] = Form(None),
-    ref_type: Optional[str] = Form(None),
-    selfie: UploadFile = File(...),
-    proof_of_address: UploadFile = File(...),
-    profile_photo: Optional[UploadFile] = File(None),
+    body: TechnicianRegisterRequest,
     db=Depends(get_db),
 ):
-    cpf_clean = re.sub(r"\D", "", cpf)
+    cpf_clean = re.sub(r"\D", "", body.cpf)
     if not validate_cpf(cpf_clean):
         raise HTTPException(400, "CPF inválido.")
-    if len(password) < 8:
+    if len(body.password) < 8:
         raise HTTPException(400, "Senha deve ter no mínimo 8 caracteres.")
 
-    existing = await db.technicians.find_one({"$or": [{"cpf": cpf_clean}, {"email": email.lower()}]})
+    existing = await db.technicians.find_one({"$or": [{"cpf": cpf_clean}, {"email": body.email.lower()}]})
     if existing:
         field = "CPF" if existing.get("cpf") == cpf_clean else "e-mail"
         raise HTTPException(400, f"Já existe um cadastro com este {field}.")
 
-    selfie_url = await upload_to_cloudinary(selfie)
-    proof_url = await upload_to_cloudinary(proof_of_address)
-    profile_photo_url = await upload_to_cloudinary(profile_photo, folder="uaifix/profiles") if profile_photo and profile_photo.filename else None
-
     client_ip = request.client.host if request.client else "unknown"
+    now = datetime.utcnow()
 
     doc = TechnicianDB(
-        name=name.strip(),
+        name=body.name.strip(),
         cpf=cpf_clean,
-        email=email.lower().strip(),
-        phone=re.sub(r"\D", "", phone),
-        password_hash=hash_password(password),
+        email=body.email.lower().strip(),
+        phone=re.sub(r"\D", "", body.phone),
+        password_hash=hash_password(body.password),
         address=Address(
-            zip_code=re.sub(r"\D", "", zip_code),
-            street=street.strip(),
-            number=number.strip(),
-            complement=complement.strip() if complement else None,
-            neighborhood=neighborhood.strip(),
-            city=city.strip(),
-            state=state.upper().strip(),
+            zip_code=re.sub(r"\D", "", body.zip_code),
+            street=body.street.strip(),
+            number=body.number.strip(),
+            complement=body.complement.strip() if body.complement else None,
+            neighborhood=body.neighborhood.strip(),
+            city=body.city.strip(),
+            state=body.state.upper().strip(),
         ),
-        selfie_filename=selfie_url,
-        proof_of_address_filename=proof_url,
-        profile_photo_url=profile_photo_url,
-        commercial_reference=CommercialReference(
-            name=ref_name.strip(),
-            contact=ref_contact.strip(),
-            type=ref_type,
-        ) if ref_name and ref_contact and ref_type else None,
-        terms_accepted_at=datetime.utcnow(),
+        status="approved",
+        approved_at=now,
+        trial_started_at=now,
+        subscription_status="trial",
+        terms_accepted_at=now,
         terms_ip=client_ip,
     ).model_dump()
 
     result = await db.technicians.insert_one(doc)
-    return {"id": str(result.inserted_id), "message": "Cadastro enviado para análise. Você receberá uma resposta em até 48 horas."}
+    return {"id": str(result.inserted_id), "message": "Cadastro realizado com sucesso!"}
 
 
 @router.post("/login/technician", response_model=LoginResponse)

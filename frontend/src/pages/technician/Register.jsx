@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/client'
 import ProgressSteps from '../../components/ProgressSteps'
-import FileUpload from '../../components/FileUpload'
 import Logo from '../../components/Logo'
 
-const STEPS = ['Dados', 'Endereço', 'CPF', 'Documentos', 'Termos']
+const STEPS = ['Dados', 'Endereço', 'CPF', 'Termos']
 
 const TERMS_TEXT = `TERMO DE RESPONSABILIDADE — UAIFIX
 
@@ -73,6 +72,7 @@ export default function TechnicianRegister() {
   const [loading, setLoading] = useState(false)
   const [globalError, setGlobalError] = useState('')
   const [errors, setErrors] = useState({})
+  const [success, setSuccess] = useState(false)
 
   const [form, setForm] = useState({
     name: '', phone: '', email: '', password: '', confirmPassword: '',
@@ -80,7 +80,6 @@ export default function TechnicianRegister() {
     cpf: '',
     termsAccepted: false,
   })
-  const [files, setFiles] = useState({ selfie: null, proof_of_address: null })
   const [cepLoading, setCepLoading] = useState(false)
 
   const set = (field, value) => {
@@ -109,10 +108,6 @@ export default function TechnicianRegister() {
       if (!validateCPF(form.cpf)) e.cpf = 'CPF inválido'
     }
     if (step === 4) {
-      if (!files.selfie) e.selfie = 'Selfie obrigatória'
-      if (!files.proof_of_address) e.proof_of_address = 'Comprovante obrigatório'
-    }
-    if (step === 5) {
       if (!form.termsAccepted) e.termsAccepted = 'Você deve aceitar os termos para continuar'
     }
     setErrors(e)
@@ -158,31 +153,51 @@ export default function TechnicianRegister() {
     setLoading(true)
     setGlobalError('')
     try {
-      const fd = new FormData()
-      fd.append('name', form.name.trim())
-      fd.append('phone', form.phone.replace(/\D/g, ''))
-      fd.append('email', form.email.toLowerCase().trim())
-      fd.append('password', form.password)
-      fd.append('zip_code', form.zip_code.replace(/\D/g, ''))
-      fd.append('street', form.street.trim())
-      fd.append('number', form.number.trim())
-      if (form.complement.trim()) fd.append('complement', form.complement.trim())
-      fd.append('neighborhood', form.neighborhood.trim())
-      fd.append('city', form.city.trim())
-      fd.append('state', form.state.toUpperCase().trim())
-      fd.append('cpf', form.cpf.replace(/\D/g, ''))
-      fd.append('selfie', files.selfie)
-      fd.append('proof_of_address', files.proof_of_address)
-
-      await api.post('/auth/register/technician', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      await api.post('/auth/register/technician', {
+        name: form.name.trim(),
+        phone: form.phone.replace(/\D/g, ''),
+        email: form.email.toLowerCase().trim(),
+        password: form.password,
+        zip_code: form.zip_code.replace(/\D/g, ''),
+        street: form.street.trim(),
+        number: form.number.trim(),
+        complement: form.complement.trim() || undefined,
+        neighborhood: form.neighborhood.trim(),
+        city: form.city.trim(),
+        state: form.state.toUpperCase().trim(),
+        cpf: form.cpf.replace(/\D/g, ''),
       })
-      navigate('/tecnico/aguardando')
+      setSuccess(true)
     } catch (err) {
       setGlobalError(err.response?.data?.detail || 'Erro ao enviar cadastro. Tente novamente.')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen py-8 px-4 flex items-center justify-center">
+        <div className="max-w-sm w-full text-center space-y-5">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto"
+               style={{ background: 'rgba(74,222,128,0.12)' }}>
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                 style={{ color: '#4ADE80' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-cream">Cadastro realizado!</h2>
+            <p className="text-sm text-cream/50 mt-2">
+              Sua conta foi criada com sucesso. Faça login para começar a receber chamados.
+            </p>
+          </div>
+          <button onClick={() => navigate('/tecnico/login')} className="btn-gold w-full py-3">
+            Ir para o login
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -283,7 +298,7 @@ export default function TechnicianRegister() {
               <div className="info-box">
                 <p className="font-semibold mb-1">Por que pedimos seu CPF?</p>
                 <p>
-                  Usamos o CPF <strong>apenas para verificar sua identidade</strong> durante a análise do cadastro.
+                  Usamos o CPF <strong>apenas para verificar sua identidade</strong> e evitar cadastros duplicados.
                   Ele nunca é exibido para clientes nem compartilhado com terceiros.
                 </p>
               </div>
@@ -295,33 +310,6 @@ export default function TechnicianRegister() {
           )}
 
           {step === 4 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-cream">Documentos</h2>
-              <p className="text-sm text-cream/45">
-                Seus documentos são analisados pela equipe UaiFix em até 48 horas e não são compartilhados com clientes.
-              </p>
-
-              <FileUpload
-                label="Selfie"
-                hint="Foto do rosto com boa iluminação. Sem óculos escuros ou boné."
-                value={files.selfie}
-                onChange={(f) => setFiles((prev) => ({ ...prev, selfie: f }))}
-                required
-              />
-              {errors.selfie && <p className="text-xs" style={{ color: '#F87171' }}>{errors.selfie}</p>}
-
-              <FileUpload
-                label="Comprovante de endereço"
-                hint="Conta de água, luz, gás ou internet dos últimos 3 meses."
-                value={files.proof_of_address}
-                onChange={(f) => setFiles((prev) => ({ ...prev, proof_of_address: f }))}
-                required
-              />
-              {errors.proof_of_address && <p className="text-xs" style={{ color: '#F87171' }}>{errors.proof_of_address}</p>}
-            </div>
-          )}
-
-          {step === 5 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-cream">Termos de Responsabilidade</h2>
 
@@ -354,7 +342,7 @@ export default function TechnicianRegister() {
                 Voltar
               </button>
             )}
-            {step < 5 ? (
+            {step < 4 ? (
               <button onClick={next} className="btn-gold flex-1 py-3">Próximo</button>
             ) : (
               <button onClick={submit} disabled={loading} className="btn-gold flex-1 py-3">
@@ -363,7 +351,7 @@ export default function TechnicianRegister() {
                     <div className="animate-spin h-4 w-4 rounded-full border-2" style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
                     Enviando...
                   </>
-                ) : 'Enviar Cadastro'}
+                ) : 'Criar conta'}
               </button>
             )}
           </div>
