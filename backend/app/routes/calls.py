@@ -112,10 +112,6 @@ async def create_call(
     if existing:
         raise HTTPException(400, "Você já tem um chamado em aberto. Cancele-o antes de abrir outro.")
 
-    address_dict = client.get("address")
-    if not address_dict:
-        raise HTTPException(400, "Cadastre um endereço na sua conta antes de abrir um chamado.")
-
     doc = ServiceCallDB(
         client_id=str(client["_id"]),
         client_name=client["name"],
@@ -124,7 +120,15 @@ async def create_call(
         brand=body.brand.strip(),
         symptom=body.symptom.strip(),
         description=body.description.strip() if body.description else None,
-        address=Address(**address_dict),
+        address=Address(
+            zip_code=body.zip_code,
+            street=body.street.strip(),
+            number=body.number.strip(),
+            complement=body.complement.strip() if body.complement else None,
+            neighborhood=body.neighborhood.strip(),
+            city=body.city.strip(),
+            state=body.state.upper().strip(),
+        ),
     ).model_dump()
 
     result = await db.calls.insert_one(doc)

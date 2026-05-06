@@ -11,6 +11,13 @@ class CreateCallRequest(BaseModel):
     brand: str
     symptom: str
     description: Optional[str] = None
+    zip_code: str
+    street: str
+    number: str
+    complement: Optional[str] = None
+    neighborhood: str
+    city: str
+    state: str
 
 
 class CallSummaryResponse(BaseModel):
