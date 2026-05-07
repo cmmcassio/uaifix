@@ -52,9 +52,16 @@ function fmtPhone(p) {
   return p
 }
 
+function parseUTC(s) {
+  if (typeof s === 'string' && !s.endsWith('Z') && !/[+\-]\d\d:\d\d$/.test(s)) {
+    return new Date(s + 'Z')
+  }
+  return new Date(s)
+}
+
 function useCountdown(expiresAt, onExpired) {
   const [secsLeft, setSecsLeft] = useState(() =>
-    expiresAt ? Math.max(0, Math.floor((new Date(expiresAt) - Date.now()) / 1000)) : null
+    expiresAt ? Math.max(0, Math.floor((parseUTC(expiresAt) - Date.now()) / 1000)) : null
   )
   const expiredFired = useRef(false)
 
@@ -62,7 +69,7 @@ function useCountdown(expiresAt, onExpired) {
     if (!expiresAt) return
     expiredFired.current = false
     const interval = setInterval(() => {
-      const s = Math.max(0, Math.floor((new Date(expiresAt) - Date.now()) / 1000))
+      const s = Math.max(0, Math.floor((parseUTC(expiresAt) - Date.now()) / 1000))
       setSecsLeft(s)
       if (s === 0 && !expiredFired.current) {
         expiredFired.current = true
@@ -111,7 +118,7 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
       {/* ── CARD SERVIÇO ── */}
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
-          <Logo size="sm" showTagline={false} />
+          <span className="font-bold text-base tracking-tight" style={{ color: '#2D5016' }}>UaiFix</span>
           {secsLeft !== null && (
             <span className="text-xs font-bold tabular-nums px-2.5 py-1 rounded-full"
                   style={{
