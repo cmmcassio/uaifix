@@ -60,6 +60,8 @@ class CallDetailResponse(BaseModel):
     technician_payment_methods: List[str] = []
     pending_confirmation_expires_at: Optional[datetime] = None
     accepted_at: Optional[datetime]
+    on_the_way_at: Optional[datetime] = None
+    arrived_at: Optional[datetime] = None
     completed_at: Optional[datetime]
     rated_by_client: bool
     created_at: datetime

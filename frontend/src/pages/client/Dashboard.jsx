@@ -7,11 +7,108 @@ import StarRating from '../../components/StarRating'
 const APPLIANCE_LABEL = { refrigerator: 'Geladeira', washing_machine: 'Máquina de lavar' }
 
 const STATUS_INFO = {
-  open:        { label: 'Buscando técnico...', cls: 'badge badge-pending', dot: 'bg-yellow-400 animate-pulse' },
-  accepted:    { label: 'Técnico confirmado', cls: 'badge badge-approved',  dot: 'bg-green-500' },
-  in_progress: { label: 'Em atendimento',    cls: 'badge badge-active',    dot: 'bg-blue-500' },
-  completed:   { label: 'Concluído',         cls: 'badge badge-done',      dot: 'bg-cream/30' },
-  cancelled:   { label: 'Cancelado',         cls: 'badge badge-rejected',  dot: 'bg-red-500' },
+  open:        { label: 'Buscando técnico...', cls: 'badge badge-pending',  dot: 'bg-yellow-400 animate-pulse' },
+  accepted:    { label: 'Técnico confirmado',  cls: 'badge badge-approved', dot: 'bg-green-500' },
+  on_the_way:  { label: 'A caminho',           cls: 'badge badge-pending',  dot: 'bg-yellow-400 animate-pulse' },
+  arrived:     { label: 'Chegou no local',     cls: 'badge badge-active',   dot: 'bg-blue-500 animate-pulse' },
+  in_progress: { label: 'Em atendimento',      cls: 'badge badge-active',   dot: 'bg-blue-500' },
+  completed:   { label: 'Concluído',           cls: 'badge badge-done',     dot: 'bg-cream/30' },
+  cancelled:   { label: 'Cancelado',           cls: 'badge badge-rejected', dot: 'bg-red-500' },
+}
+
+const PROGRESS_STEPS = [
+  {
+    key: 'accepted',
+    label: 'Confirmado',
+    color: '#22c55e',
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+      </svg>
+    ),
+  },
+  {
+    key: 'on_the_way',
+    label: 'A caminho',
+    color: '#C9A84C',
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+      </svg>
+    ),
+  },
+  {
+    key: 'arrived',
+    label: 'Chegou',
+    color: '#3b82f6',
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+      </svg>
+    ),
+  },
+  {
+    key: 'completed',
+    label: 'Concluído',
+    color: '#22c55e',
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+      </svg>
+    ),
+  },
+]
+
+const STEP_ORDER = ['accepted', 'on_the_way', 'arrived', 'completed']
+const STEP_MESSAGES = {
+  accepted:   'Técnico confirmado! Aguarde o contato.',
+  on_the_way: 'Técnico está a caminho do seu endereço.',
+  arrived:    'Técnico chegou no local.',
+  completed:  'Serviço concluído! Avalie o técnico.',
+}
+
+function CallProgressBar({ status }) {
+  const currentIdx = STEP_ORDER.indexOf(status)
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center">
+        {PROGRESS_STEPS.map((step, i) => {
+          const isDone = i < currentIdx
+          const isCurrent = i === currentIdx
+          const isFuture = i > currentIdx
+          const color = isFuture ? 'rgba(26,26,26,0.2)' : step.color
+          return (
+            <div key={step.key} className="flex items-center" style={{ flex: i < PROGRESS_STEPS.length - 1 ? '1' : 'none' }}>
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                <div
+                  className={isCurrent ? 'animate-pulse' : ''}
+                  style={{
+                    width: 36, height: 36,
+                    borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isFuture ? 'rgba(26,26,26,0.04)' : `${step.color}22`,
+                    border: `2px solid ${color}`,
+                    color,
+                  }}
+                >
+                  {step.icon}
+                </div>
+                <span style={{ fontSize: '0.65rem', fontWeight: 600, color, textAlign: 'center', lineHeight: 1.2 }}>
+                  {step.label}
+                </span>
+              </div>
+              {i < PROGRESS_STEPS.length - 1 && (
+                <div className="flex-1 h-0.5 mx-1.5 mb-4"
+                     style={{ background: isDone ? '#C9A84C' : 'rgba(26,26,26,0.08)' }} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="text-xs text-cream/50 text-center">{STEP_MESSAGES[status] ?? ''}</p>
+    </div>
+  )
 }
 
 function timeAgo(iso) {
@@ -64,7 +161,7 @@ export default function ClientDashboard() {
     return () => clearInterval(id)
   }, [user])
 
-  const activeCall = calls.find((c) => ['open', 'no_technician_available', 'accepted', 'in_progress'].includes(c.status))
+  const activeCall = calls.find((c) => ['open', 'no_technician_available', 'accepted', 'on_the_way', 'arrived', 'in_progress'].includes(c.status))
   const pendingRating = !activeCall && calls.find((c) => c.status === 'completed' && !c.rated_by_client)
 
   const cancel = async () => {
@@ -240,7 +337,11 @@ export default function ClientDashboard() {
               {activeCall.neighborhood}, {activeCall.city} · {timeAgo(activeCall.created_at)}
             </div>
 
-            {['accepted', 'in_progress'].includes(activeCall.status) && activeCall.technician_name && (
+            {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(activeCall.status) && (
+              <CallProgressBar status={activeCall.status} />
+            )}
+
+            {['accepted', 'on_the_way', 'arrived', 'in_progress'].includes(activeCall.status) && activeCall.technician_name && (
               <div className="rounded-xl p-3 space-y-3" style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)' }}>
                 <p className="text-xs font-semibold" style={{ color: '#4ADE80' }}>Técnico confirmado</p>
 

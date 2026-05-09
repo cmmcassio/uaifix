@@ -15,7 +15,7 @@ class ServiceCallDB(BaseModel):
     symptom: str
     description: Optional[str] = None
     address: Address
-    status: str = "open"       # open | accepted | in_progress | completed | cancelled
+    status: str = "open"       # open | accepted | on_the_way | arrived | in_progress | completed | cancelled | no_technician_available
     technician_id: Optional[str] = None
     technician_name: Optional[str] = None
     offered_to: Optional[str] = None
@@ -23,6 +23,8 @@ class ServiceCallDB(BaseModel):
     declined_by: List[str] = Field(default_factory=list)
     rated_by_client: bool = False
     accepted_at: Optional[datetime] = None
+    on_the_way_at: Optional[datetime] = None
+    arrived_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)

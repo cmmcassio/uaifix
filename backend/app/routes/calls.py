@@ -295,7 +295,7 @@ async def my_jobs(
 
     cursor = db.calls.find({
         "technician_id": str(technician["_id"]),
-        "status": {"$in": ["accepted", "in_progress"]},
+        "status": {"$in": ["accepted", "on_the_way", "arrived", "in_progress"]},
     }).sort("accepted_at", -1).limit(20)
     calls = await cursor.to_list(length=20)
     return [_detail(c) for c in calls]
@@ -368,7 +368,7 @@ async def complete_call(
         {
             "_id": oid,
             "technician_id": str(technician["_id"]),
-            "status": {"$in": ["accepted", "in_progress"]},
+            "status": {"$in": ["accepted", "on_the_way", "arrived", "in_progress"]},
         },
         {"$set": {
             "status": "completed",
@@ -385,6 +385,48 @@ async def complete_call(
     )
 
     return {"message": "Chamado concluído com sucesso!"}
+
+
+@router.post("/{call_id}/on-the-way")
+async def on_the_way(
+    call_id: str,
+    technician=Depends(get_current_technician),
+    db=Depends(get_db),
+):
+    try:
+        oid = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido.")
+
+    now = datetime.utcnow()
+    result = await db.calls.update_one(
+        {"_id": oid, "technician_id": str(technician["_id"]), "status": "accepted"},
+        {"$set": {"status": "on_the_way", "on_the_way_at": now, "updated_at": now}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(400, "Chamado não encontrado ou status inválido.")
+    return {"message": "Status atualizado: a caminho."}
+
+
+@router.post("/{call_id}/arrived")
+async def arrived(
+    call_id: str,
+    technician=Depends(get_current_technician),
+    db=Depends(get_db),
+):
+    try:
+        oid = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido.")
+
+    now = datetime.utcnow()
+    result = await db.calls.update_one(
+        {"_id": oid, "technician_id": str(technician["_id"]), "status": "on_the_way"},
+        {"$set": {"status": "arrived", "arrived_at": now, "updated_at": now}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(400, "Chamado não encontrado ou status inválido.")
+    return {"message": "Status atualizado: chegou no local."}
 
 
 @router.post("/{call_id}/decline")

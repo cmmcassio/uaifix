@@ -100,7 +100,7 @@ function Stars({ value, size = 14, filled = true }) {
 
 function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpired, techPricing, techStats }) {
   const secsLeft = useCountdown(call.offer_expires_at, onExpired)
-  const urgent = secsLeft !== null && secsLeft <= 30
+  const urgent = secsLeft !== null && secsLeft <= 5
 
   const priceRange = call.appliance_type === 'refrigerator'
     ? techPricing?.repair_refrigerator
@@ -162,7 +162,7 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
           <div
             className="h-full transition-all duration-1000"
             style={{
-              width: `${Math.min(100, (secsLeft / 120) * 100)}%`,
+              width: `${Math.min(100, (secsLeft / 15) * 100)}%`,
               background: urgent ? '#F87171' : '#C9A84C',
             }}
           />
@@ -260,7 +260,17 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
   )
 }
 
-function ActiveJobCard({ call, onComplete, completing }) {
+const ACTIVE_JOB_STATUS = {
+  accepted:   { label: 'Aceito',    cls: 'badge-approved' },
+  on_the_way: { label: 'A caminho', cls: 'badge-pending'  },
+  arrived:    { label: 'Chegou',    cls: 'badge-active'   },
+  in_progress:{ label: 'Em andamento', cls: 'badge-active' },
+}
+
+function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, goingOnTheWay, arriving, completing }) {
+  const statusInfo = ACTIVE_JOB_STATUS[call.status] ?? ACTIVE_JOB_STATUS.accepted
+  const busy = goingOnTheWay === call.id || arriving === call.id || completing === call.id
+
   return (
     <div className="card-success p-4 space-y-3">
       <div className="flex items-start gap-3">
@@ -274,7 +284,7 @@ function ActiveJobCard({ call, onComplete, completing }) {
           </p>
           <p className="text-sm text-cream/55 mt-0.5">{call.symptom}</p>
         </div>
-        <span className="badge badge-approved shrink-0">Aceito</span>
+        <span className={`badge ${statusInfo.cls} shrink-0`}>{statusInfo.label}</span>
       </div>
 
       <div className="rounded-xl p-3 space-y-1.5 text-sm"
@@ -301,15 +311,21 @@ function ActiveJobCard({ call, onComplete, completing }) {
         </p>
       </div>
 
-      <button
-        onClick={() => onComplete(call.id)}
-        disabled={completing === call.id}
-        className="btn-success w-full py-2.5 text-sm"
-      >
-        {completing === call.id ? (
-          <div className="spinner h-4 w-4 border-2" />
-        ) : 'Marcar como concluído'}
-      </button>
+      {call.status === 'accepted' && (
+        <button onClick={() => onOnTheWay(call.id)} disabled={busy} className="btn-gold w-full py-2.5 text-sm">
+          {goingOnTheWay === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'A caminho'}
+        </button>
+      )}
+      {call.status === 'on_the_way' && (
+        <button onClick={() => onArrived(call.id)} disabled={busy} className="btn-gold w-full py-2.5 text-sm">
+          {arriving === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'Cheguei no local'}
+        </button>
+      )}
+      {(call.status === 'arrived' || call.status === 'in_progress') && (
+        <button onClick={() => onComplete(call.id)} disabled={busy} className="btn-success w-full py-2.5 text-sm">
+          {completing === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'Marcar como concluído'}
+        </button>
+      )}
     </div>
   )
 }
@@ -343,6 +359,8 @@ export default function TechnicianDashboard() {
   const [loading, setLoading] = useState(true)
   const [accepting, setAccepting] = useState(null)
   const [declining, setDeclining] = useState(null)
+  const [goingOnTheWay, setGoingOnTheWay] = useState(null)
+  const [arriving, setArriving] = useState(null)
   const [completing, setCompleting] = useState(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
@@ -419,6 +437,32 @@ export default function TechnicianDashboard() {
       setError(err.response?.data?.detail || 'Erro ao recusar chamado.')
     } finally {
       setDeclining(null)
+    }
+  }
+
+  const markOnTheWay = async (callId) => {
+    setGoingOnTheWay(callId)
+    setError('')
+    try {
+      await api.post(`/calls/${callId}/on-the-way`)
+      await fetchAll(true)
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao atualizar status.')
+    } finally {
+      setGoingOnTheWay(null)
+    }
+  }
+
+  const markArrived = async (callId) => {
+    setArriving(callId)
+    setError('')
+    try {
+      await api.post(`/calls/${callId}/arrived`)
+      await fetchAll(true)
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao atualizar status.')
+    } finally {
+      setArriving(null)
     }
   }
 
@@ -652,7 +696,11 @@ export default function TechnicianDashboard() {
               <ActiveJobCard
                 key={call.id}
                 call={call}
+                onOnTheWay={markOnTheWay}
+                onArrived={markArrived}
                 onComplete={complete}
+                goingOnTheWay={goingOnTheWay}
+                arriving={arriving}
                 completing={completing}
               />
             ))
