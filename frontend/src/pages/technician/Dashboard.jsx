@@ -59,6 +59,12 @@ function parseUTC(s) {
   return new Date(s)
 }
 
+function addMinutes(isoStr, minutes) {
+  return new Date(parseUTC(isoStr).getTime() + minutes * 60000).toISOString()
+}
+
+const noop = () => {}
+
 function useCountdown(expiresAt, onExpired) {
   const [secsLeft, setSecsLeft] = useState(() =>
     expiresAt ? Math.max(0, Math.floor((parseUTC(expiresAt) - Date.now()) / 1000)) : null
@@ -281,6 +287,15 @@ function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, goingOnTheWay,
   const statusInfo = ACTIVE_JOB_STATUS[call.status] ?? ACTIVE_JOB_STATUS.accepted
   const busy = goingOnTheWay === call.id || arriving === call.id || completing === call.id
 
+  const deadline30 = call.status === 'accepted' && call.accepted_at
+    ? addMinutes(call.accepted_at, 30) : null
+  const secsLeft30 = useCountdown(deadline30, noop)
+  const timer30 = secsLeft30 !== null
+    ? `${String(Math.floor(secsLeft30 / 60)).padStart(2, '0')}:${String(secsLeft30 % 60).padStart(2, '0')}`
+    : null
+  const timerUrgent = secsLeft30 !== null && secsLeft30 < 300
+  const timerPulse  = secsLeft30 !== null && secsLeft30 < 120
+
   return (
     <div className="card-success p-4 space-y-3">
       <div className="flex items-start gap-3">
@@ -323,12 +338,17 @@ function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, goingOnTheWay,
 
       {call.status === 'accepted' && (
         <div className="space-y-1.5">
+          {timer30 !== null && (
+            <p className={`text-center text-sm font-bold tabular-nums ${timerPulse ? 'animate-pulse' : ''}`}
+               style={{ color: timerUrgent ? '#EF4444' : 'rgba(26,26,26,0.55)' }}>
+              Clique "A caminho" em{' '}
+              <span style={{ color: timerUrgent ? '#EF4444' : '#1A1A1A' }}>{timer30}</span>
+              {' '}ou o chamado será redistribuído e você receberá uma advertência
+            </p>
+          )}
           <button onClick={() => onOnTheWay(call.id)} disabled={busy} className="btn-gold w-full py-2.5 text-sm">
             {goingOnTheWay === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'A caminho'}
           </button>
-          <p className="text-center leading-tight" style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
-            Clique para avisar o cliente que você está indo. Se não clicar em 60 minutos o chamado será redistribuído.
-          </p>
         </div>
       )}
       {call.status === 'on_the_way' && (
@@ -351,6 +371,41 @@ function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, goingOnTheWay,
           </p>
         </div>
       )}
+    </div>
+  )
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—'
+  const d = typeof iso === 'string' && !iso.endsWith('Z') ? new Date(iso + 'Z') : new Date(iso)
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+    ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function HistoryCard({ call }) {
+  return (
+    <div className="card p-4 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-cream text-sm">
+            {APPLIANCE_LABEL[call.appliance_type]} {call.brand}
+          </p>
+          <p className="text-sm text-cream/55 mt-0.5">{call.client_name}</p>
+        </div>
+        {call.rated_by_client && (
+          <div className="flex items-center gap-1 shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#C9A84C" stroke="#C9A84C" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d={STAR_PATH} />
+            </svg>
+            <span className="text-xs font-semibold" style={{ color: '#C9A84C' }}>Avaliado</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-cream/35">
+        <span>{[call.neighborhood, call.city].filter(Boolean).join(', ')}</span>
+        <span>{fmtDate(call.completed_at)}</span>
+      </div>
     </div>
   )
 }
@@ -392,6 +447,9 @@ export default function TechnicianDashboard() {
   const [completing, setCompleting] = useState(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [warningToast, setWarningToast] = useState(false)
+  const [suspensionDismissed, setSuspensionDismissed] = useState(false)
+  const prevWarningsRef = useRef(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const photoInputRef = useRef(null)
   const [subscriptionInfo, setSubscriptionInfo] = useState(null)
@@ -407,9 +465,10 @@ export default function TechnicianDashboard() {
     if (!silent) setLoading(true)
     setError('')
     try {
-      const [avRes, jobRes] = await Promise.all([
+      const [avRes, jobRes, meRes] = await Promise.all([
         api.get('/calls/available'),
         api.get('/calls/my-jobs'),
+        api.get('/technician/me'),
       ])
       setAvailable(avRes.data)
       const newIds = new Set(avRes.data.map(c => c.id))
@@ -417,6 +476,7 @@ export default function TechnicianDashboard() {
       const wasEmpty = prevAvailableIds.current.size === 0
       prevAvailableIds.current = newIds
       setMyJobs(jobRes.data)
+      setSubscriptionInfo(meRes.data)
 
       if (avRes.data.length === 0) {
         if (alertIntervalRef.current) { clearInterval(alertIntervalRef.current); alertIntervalRef.current = null }
@@ -447,6 +507,16 @@ export default function TechnicianDashboard() {
     const interval = setInterval(() => fetchAll(true), 15000)
     return () => clearInterval(interval)
   }, [user, fetchAll])
+
+  useEffect(() => {
+    if (!subscriptionInfo) return
+    const wc = subscriptionInfo.warnings_count ?? 0
+    if (prevWarningsRef.current !== null && wc > prevWarningsRef.current) {
+      setWarningToast(true)
+      setTimeout(() => setWarningToast(false), 10000)
+    }
+    prevWarningsRef.current = wc
+  }, [subscriptionInfo])
 
   const clearAlert = () => {
     if (alertIntervalRef.current) { clearInterval(alertIntervalRef.current); alertIntervalRef.current = null }
@@ -573,6 +643,10 @@ export default function TechnicianDashboard() {
 
   if (!user) return null
 
+  const isSuspended = subscriptionInfo?.suspended_until
+    ? parseUTC(subscriptionInfo.suspended_until) > new Date()
+    : false
+
   return (
     <div className="min-h-screen">
       {showNewCallBanner && (
@@ -584,10 +658,31 @@ export default function TechnicianDashboard() {
         </div>
       )}
 
+      {warningToast && (
+        <div
+          className="fixed left-0 right-0 z-40 flex items-center justify-center py-3 px-4"
+          style={{ background: '#EF4444', color: '#FFFFFF', top: showNewCallBanner ? 44 : 0 }}
+        >
+          <span className="font-bold text-sm text-center">⚠️ Advertência recebida. Você não compareceu ao atendimento. Sua conta ficará suspensa por 24h.</span>
+        </div>
+      )}
+
       <header className="app-header px-4 sm:px-6 py-4 flex items-center justify-between">
         <div>
           <span className="text-base font-bold text-gold">UaiFix</span>
-          <p className="text-xs text-cream/40">Olá, {user.name?.split(' ')[0]}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-xs text-cream/40">Olá, {user.name?.split(' ')[0]}</p>
+            {subscriptionInfo?.warnings_count > 0 && (
+              <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: subscriptionInfo.warnings_count >= 3 ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.15)',
+                      color: subscriptionInfo.warnings_count >= 3 ? '#DC2626' : '#92400E',
+                      border: `1px solid ${subscriptionInfo.warnings_count >= 3 ? 'rgba(239,68,68,0.3)' : 'rgba(234,179,8,0.3)'}`,
+                    }}>
+                ⚠️ {subscriptionInfo.warnings_count} {subscriptionInfo.warnings_count === 1 ? 'advertência' : 'advertências'}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -670,11 +765,32 @@ export default function TechnicianDashboard() {
         </div>
       )}
 
+      {isSuspended && !suspensionDismissed ? (
+        <div className="max-w-2xl mx-auto px-4 py-10">
+          <div className="card-danger p-6 text-center space-y-4">
+            <p className="text-5xl">🚫</p>
+            <p className="font-bold text-lg" style={{ color: '#991B1B' }}>Conta suspensa</p>
+            <p className="text-sm leading-relaxed" style={{ color: '#7F1D1D' }}>
+              Sua conta está suspensa até{' '}
+              <strong>{fmtDate(subscriptionInfo.suspended_until)}</strong>
+              {' '}por não comparecer a atendimentos aceitos.
+            </p>
+            <button
+              onClick={() => setSuspensionDismissed(true)}
+              className="btn-danger w-full py-3"
+            >
+              Entendi
+            </button>
+          </div>
+        </div>
+      ) : (
+      <>
       <div className="app-header border-b" style={{ borderColor: 'rgba(201,168,76,0.12)' }}>
         <div className="max-w-2xl mx-auto flex">
           {[
             { key: 'available', label: 'Disponíveis', count: available.length },
-            { key: 'jobs', label: 'Meus atendimentos', count: myJobs.length },
+            { key: 'jobs',      label: 'Meus atendimentos', count: myJobs.filter(c => c.status !== 'completed').length },
+            { key: 'history',   label: 'Histórico', count: 0 },
           ].map(({ key, label, count }) => (
             <button
               key={key}
@@ -731,21 +847,22 @@ export default function TechnicianDashboard() {
               />
             ))
           )
-        ) : (
-          myJobs.length === 0 ? (
-            <div className="text-center py-16 space-y-2">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
-                   style={{ background: 'rgba(240,237,228,0.05)' }}>
-                <svg className="w-6 h-6 text-cream/25" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                    d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
-                </svg>
+        ) : tab === 'jobs' ? (
+          (() => {
+            const activeJobs = myJobs.filter(c => c.status !== 'completed')
+            return activeJobs.length === 0 ? (
+              <div className="text-center py-16 space-y-2">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+                     style={{ background: 'rgba(240,237,228,0.05)' }}>
+                  <svg className="w-6 h-6 text-cream/25" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-cream/50">Nenhum atendimento ativo</p>
+                <p className="text-xs text-cream/30">Aceite um chamado disponível para começar.</p>
               </div>
-              <p className="text-sm font-medium text-cream/50">Nenhum atendimento ativo</p>
-              <p className="text-xs text-cream/30">Aceite um chamado disponível para começar.</p>
-            </div>
-          ) : (
-            myJobs.map((call) => (
+            ) : activeJobs.map((call) => (
               <ActiveJobCard
                 key={call.id}
                 call={call}
@@ -757,9 +874,30 @@ export default function TechnicianDashboard() {
                 completing={completing}
               />
             ))
-          )
+          })()
+        ) : (
+          (() => {
+            const completedJobs = myJobs.filter(c => c.status === 'completed')
+            return completedJobs.length === 0 ? (
+              <div className="text-center py-16 space-y-2">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+                     style={{ background: 'rgba(240,237,228,0.05)' }}>
+                  <svg className="w-6 h-6 text-cream/25" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-cream/50">Nenhum atendimento concluído</p>
+                <p className="text-xs text-cream/30">Seus últimos 30 dias aparecerão aqui.</p>
+              </div>
+            ) : completedJobs.map((call) => (
+              <HistoryCard key={call.id} call={call} />
+            ))
+          })()
         )}
       </main>
+      </>
+      )}
     </div>
   )
 }

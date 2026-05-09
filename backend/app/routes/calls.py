@@ -311,11 +311,15 @@ async def my_jobs(
     if technician.get("status") != "approved":
         raise HTTPException(403, "Acesso negado.")
 
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
     cursor = db.calls.find({
         "technician_id": str(technician["_id"]),
-        "status": {"$in": ["accepted", "on_the_way", "arrived", "in_progress"]},
-    }).sort("accepted_at", -1).limit(20)
-    calls = await cursor.to_list(length=20)
+        "$or": [
+            {"status": {"$in": ["accepted", "on_the_way", "arrived", "in_progress"]}},
+            {"status": "completed", "completed_at": {"$gte": thirty_days_ago}},
+        ],
+    }).sort("completed_at", -1).limit(50)
+    calls = await cursor.to_list(length=50)
     return [_detail(c) for c in calls]
 
 
