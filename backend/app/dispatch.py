@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-OFFER_DURATION_SECONDS = 15
+OFFER_DURATION_SECONDS = 45
 
 
 def _is_eligible(tech: dict, now: datetime) -> bool:

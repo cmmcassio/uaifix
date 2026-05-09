@@ -100,7 +100,7 @@ function Stars({ value, size = 14, filled = true }) {
 
 function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpired, techPricing, techStats }) {
   const secsLeft = useCountdown(call.offer_expires_at, onExpired)
-  const urgent = secsLeft !== null && secsLeft <= 5
+  const urgent = secsLeft !== null && secsLeft <= 10
 
   const priceRange = call.appliance_type === 'refrigerator'
     ? techPricing?.repair_refrigerator
@@ -162,7 +162,7 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
           <div
             className="h-full transition-all duration-1000"
             style={{
-              width: `${Math.min(100, (secsLeft / 15) * 100)}%`,
+              width: `${Math.min(100, (secsLeft / 45) * 100)}%`,
               background: urgent ? '#F87171' : '#C9A84C',
             }}
           />
@@ -372,6 +372,7 @@ const playAlert = () => {
     }
     beep(0); beep(0.7); beep(1.4)
   } catch(e) {}
+  try { navigator.vibrate([500, 200, 500, 200, 500]) } catch(e) {}
 }
 
 export default function TechnicianDashboard() {
@@ -379,6 +380,8 @@ export default function TechnicianDashboard() {
   const { user, logout } = useAuth()
   const [tab, setTab] = useState('available')
   const prevAvailableIds = useRef(new Set())
+  const alertIntervalRef = useRef(null)
+  const [showNewCallBanner, setShowNewCallBanner] = useState(false)
   const [available, setAvailable] = useState([])
   const [myJobs, setMyJobs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -411,9 +414,18 @@ export default function TechnicianDashboard() {
       setAvailable(avRes.data)
       const newIds = new Set(avRes.data.map(c => c.id))
       const hasNew = avRes.data.some(c => !prevAvailableIds.current.has(c.id))
-      if (hasNew && prevAvailableIds.current.size > 0) playAlert()
+      const wasEmpty = prevAvailableIds.current.size === 0
       prevAvailableIds.current = newIds
       setMyJobs(jobRes.data)
+
+      if (avRes.data.length === 0) {
+        if (alertIntervalRef.current) { clearInterval(alertIntervalRef.current); alertIntervalRef.current = null }
+        setShowNewCallBanner(false)
+      } else if (hasNew && !wasEmpty && !alertIntervalRef.current) {
+        playAlert()
+        setShowNewCallBanner(true)
+        alertIntervalRef.current = setInterval(() => playAlert(), 5000)
+      }
     } catch (err) {
       if (err.response?.status !== 401) {
         setError('Erro ao carregar chamados. Verifique sua conexão.')
@@ -436,7 +448,13 @@ export default function TechnicianDashboard() {
     return () => clearInterval(interval)
   }, [user, fetchAll])
 
+  const clearAlert = () => {
+    if (alertIntervalRef.current) { clearInterval(alertIntervalRef.current); alertIntervalRef.current = null }
+    setShowNewCallBanner(false)
+  }
+
   const accept = async (callId) => {
+    clearAlert()
     setAccepting(callId)
     setError('')
     try {
@@ -453,6 +471,7 @@ export default function TechnicianDashboard() {
   }
 
   const decline = async (callId) => {
+    clearAlert()
     setDeclining(callId)
     setError('')
     try {
@@ -556,6 +575,15 @@ export default function TechnicianDashboard() {
 
   return (
     <div className="min-h-screen">
+      {showNewCallBanner && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-3 px-4 animate-pulse"
+          style={{ background: '#3B82F6', color: '#FFFFFF' }}
+        >
+          <span className="font-bold text-base">🔔 Novo chamado disponível! Aceite agora.</span>
+        </div>
+      )}
+
       <header className="app-header px-4 sm:px-6 py-4 flex items-center justify-between">
         <div>
           <span className="text-base font-bold text-gold">UaiFix</span>
