@@ -166,6 +166,28 @@ async def expire_and_dispatch(db: AsyncIOMotorDatabase):
     await _handle_abandoned_calls(db, now)
     await _expire_stale_offers(db, now)
 
+    # Auto-retry: reabre chamados sem técnico após 5 minutos
+    retry_cutoff = now - timedelta(minutes=5)
+    stale_no_tech = await db.calls.find({
+        "status": "no_technician_available",
+        "no_technician_at": {"$lt": retry_cutoff},
+    }).to_list(length=50)
+
+    for call in stale_no_tech:
+        result = await db.calls.update_one(
+            {"_id": call["_id"], "status": "no_technician_available"},
+            {"$set": {
+                "status": "open",
+                "declined_by": [],
+                "no_technician_at": None,
+                "offered_to": None,
+                "offer_expires_at": None,
+                "updated_at": now,
+            }},
+        )
+        if result.modified_count > 0:
+            await trigger_dispatch_for_call(db, str(call["_id"]))
+
     unassigned = await db.calls.find({
         "status": "open",
         "offered_to": None,

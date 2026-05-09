@@ -279,38 +279,34 @@ export default function ClientDashboard() {
 
         ) : activeCall?.status === 'no_technician_available' ? (
           <div className="card p-5 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                   style={{ background: 'rgba(239,68,68,0.1)' }}>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                     style={{ color: '#F87171' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                </svg>
+            <div className="flex flex-col items-center text-center gap-3 py-2">
+              <div className="relative w-14 h-14">
+                <div className="absolute inset-0 rounded-full animate-pulse"
+                     style={{ background: 'rgba(59,130,246,0.12)', border: '2px solid rgba(59,130,246,0.25)' }} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full border-2 animate-spin"
+                       style={{ borderColor: 'rgba(59,130,246,0.2)', borderTopColor: '#3B82F6' }} />
+                </div>
               </div>
+
               <div>
-                <h2 className="text-base font-bold text-cream">Nenhum técnico disponível</h2>
-                <p className="text-sm text-cream/50 mt-0.5">
-                  {APPLIANCE_LABEL[activeCall.appliance_type]} {activeCall.brand} · {activeCall.symptom}
-                </p>
+                <p className="font-semibold text-cream text-base">Todos os técnicos estão ocupados.</p>
+                <p className="text-sm text-cream/50 mt-1">Tentando novamente automaticamente...</p>
               </div>
+
+              <p className="text-xs text-cream/35">
+                {(() => {
+                  const iso = activeCall.created_at
+                  const d = typeof iso === 'string' && !iso.endsWith('Z') ? new Date(iso + 'Z') : new Date(iso)
+                  const mins = Math.max(0, Math.floor((Date.now() - d) / 60000))
+                  return `Aguardando há ${mins} ${mins === 1 ? 'minuto' : 'minutos'}`
+                })()}
+              </p>
             </div>
 
-            <p className="text-xs text-cream/40">
-              Não encontramos técnicos disponíveis agora na sua região. Tente novamente em alguns minutos ou cancele o chamado.
-            </p>
-
-            <div className="flex flex-col gap-2">
-              <button onClick={retry} disabled={retrying || cancelling} className="btn-gold w-full py-3">
-                {retrying ? (
-                  <div className="animate-spin h-4 w-4 rounded-full border-2 mx-auto"
-                       style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
-                ) : 'Tentar novamente'}
-              </button>
-              <button onClick={cancel} disabled={cancelling || retrying} className="btn-danger w-full py-2.5 text-sm">
-                {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
-              </button>
-            </div>
+            <button onClick={cancel} disabled={cancelling} className="btn-danger w-full py-2.5 text-sm">
+              {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
+            </button>
           </div>
 
         ) : activeCall ? (
