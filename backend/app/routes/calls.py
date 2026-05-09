@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, time as time_type, timedelta
 from typing import List, Optional
 
@@ -283,11 +284,20 @@ async def available_calls(
     if technician.get("status") != "approved":
         raise HTTPException(403, "Apenas técnicos aprovados podem ver chamados disponíveis.")
 
+    tech_city = (technician.get("address") or {}).get("city", "")
+    if not tech_city:
+        return []
+
+    tech_id = str(technician["_id"])
+    city_pattern = re.compile(f"^{re.escape(tech_city)}$", re.IGNORECASE)
     now = datetime.utcnow()
+
     cursor = db.calls.find({
         "status": "open",
-        "offered_to": str(technician["_id"]),
+        "offered_to": "all",
         "offer_expires_at": {"$gt": now},
+        "address.city": {"$regex": city_pattern},
+        "declined_by": {"$nin": [tech_id]},
     }).sort("created_at", -1)
     calls = await cursor.to_list(length=10)
     return [_summary(c) for c in calls]
@@ -339,18 +349,22 @@ async def accept_call(
         {
             "_id": oid,
             "status": "open",
-            "offered_to": str(technician["_id"]),
+            "offered_to": "all",
             "offer_expires_at": {"$gt": now},
         },
         {"$set": {
             "status": "accepted",
             "technician_id": str(technician["_id"]),
             "technician_name": technician["name"],
+            "offered_to": str(technician["_id"]),
             "accepted_at": now,
             "updated_at": now,
         }},
     )
     if result.matched_count == 0:
+        existing = await db.calls.find_one({"_id": oid})
+        if existing and existing.get("status") == "accepted":
+            raise HTTPException(400, "Chamado já foi aceito por outro técnico.")
         raise HTTPException(400, "Chamado não está mais disponível ou oferta expirou.")
 
     await db.technicians.update_one(

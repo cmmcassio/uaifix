@@ -4,9 +4,6 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-OFFER_DURATION_SECONDS = 45
-
-
 def _is_eligible(tech: dict, now: datetime) -> bool:
     """Verifica se o técnico pode receber ofertas (trial válido ou assinatura ativa)."""
     suspended_until = tech.get("suspended_until")
@@ -29,90 +26,34 @@ def _is_eligible(tech: dict, now: datetime) -> bool:
 
 
 async def _assign_offer(db: AsyncIOMotorDatabase, call: dict, now: datetime):
-    """Encontra o próximo técnico elegível via round-robin e atribui a oferta."""
+    """Abre a oferta simultaneamente para todos os técnicos da cidade."""
     city = (call.get("address") or {}).get("city", "")
     if not city:
         return
 
-    declined_by = call.get("declined_by", [])
-    city_pattern = re.compile(f"^{re.escape(city)}$", re.IGNORECASE)
-
-    declined_oids = []
-    for tid in declined_by:
-        try:
-            declined_oids.append(ObjectId(tid))
-        except Exception:
-            pass
-
-    cursor = db.technicians.find({
-        "status": "approved",
-        "address.city": {"$regex": city_pattern},
-        "_id": {"$nin": declined_oids},
-    }).sort("last_offered_at", 1)
-
-    techs = await cursor.to_list(length=20)
-
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    for tech in techs:
-        if not _is_eligible(tech, now):
-            continue
-
-        calls_today = await db.calls.count_documents({
-            "technician_id": str(tech["_id"]),
-            "accepted_at": {"$gte": today_start},
-        })
-        if calls_today >= 3:
-            continue
-
-        expires_at = now + timedelta(seconds=OFFER_DURATION_SECONDS)
-        result = await db.calls.update_one(
-            {"_id": call["_id"], "status": "open", "offered_to": None},
-            {"$set": {
-                "offered_to": str(tech["_id"]),
-                "offer_expires_at": expires_at,
-                "updated_at": now,
-            }},
-        )
-        if result.modified_count > 0:
-            await db.technicians.update_one(
-                {"_id": tech["_id"]},
-                {"$set": {"last_offered_at": now}},
-            )
-        return
-
-    # Nenhum técnico elegível encontrado — marca se já recusaram o suficiente
-    if len(declined_by) >= 3:
-        await db.calls.update_one(
-            {"_id": call["_id"], "status": "open"},
-            {"$set": {
-                "status": "no_technician_available",
-                "no_technician_at": now,
-                "updated_at": now,
-            }},
-        )
+    expires_at = now + timedelta(minutes=10)
+    await db.calls.update_one(
+        {"_id": call["_id"], "status": "open", "offered_to": None},
+        {"$set": {
+            "offered_to": "all",
+            "offer_expires_at": expires_at,
+            "updated_at": now,
+        }},
+    )
 
 
 async def _expire_stale_offers(db: AsyncIOMotorDatabase, now: datetime):
-    """Expira ofertas vencidas e devolve os chamados para a fila."""
-    stale_calls = await db.calls.find({
-        "status": "open",
-        "offered_to": {"$ne": None},
-        "offer_expires_at": {"$lt": now},
-    }).to_list(length=100)
-
-    for call in stale_calls:
-        await db.calls.update_one(
-            {"_id": call["_id"], "status": "open", "offered_to": call["offered_to"]},
-            {
-                "$push": {"declined_by": call["offered_to"]},
-                "$set": {
-                    "offered_to": None,
-                    "offer_expires_at": None,
-                    "updated_at": now,
-                },
-            },
-        )
+    """Expira ofertas simultâneas que ninguém aceitou em 10 minutos."""
+    await db.calls.update_many(
+        {"status": "open", "offered_to": "all", "offer_expires_at": {"$lt": now}},
+        {"$set": {
+            "status": "no_technician_available",
+            "no_technician_at": now,
+            "offered_to": None,
+            "offer_expires_at": None,
+            "updated_at": now,
+        }},
+    )
 
 
 async def _auto_rate_completed_calls(db: AsyncIOMotorDatabase, now: datetime):
