@@ -419,13 +419,29 @@ export default function ClientDashboard() {
             )}
 
             {activeCall.status === 'open' && (
-              <button
-                onClick={cancel}
-                disabled={cancelling}
-                className="btn-danger w-full py-2.5 text-sm"
-              >
-                {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
-              </button>
+              <div className="space-y-1.5">
+                <button onClick={cancel} disabled={cancelling} className="btn-danger w-full py-2.5 text-sm">
+                  {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
+                </button>
+                <p className="text-center" style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
+                  Cancelar enquanto busca técnico não gera penalidade
+                </p>
+              </div>
+            )}
+
+            {['accepted', 'on_the_way', 'arrived'].includes(activeCall.status) && (
+              <p className="text-center" style={{ fontSize: 13, color: 'rgba(26,26,26,0.45)' }}>
+                Precisa cancelar?{' '}
+                <a
+                  href="https://wa.me/5531971263573"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold underline"
+                  style={{ color: '#3B82F6' }}
+                >
+                  Entre em contato com o suporte UaiFix
+                </a>
+              </p>
             )}
           </div>
 

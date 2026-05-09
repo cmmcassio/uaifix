@@ -236,25 +236,35 @@ function AvailableCard({ call, onAccept, onDecline, accepting, declining, onExpi
 
       {/* ── BOTÕES ── */}
       <div className="flex gap-3 mt-4">
-        <button
-          onClick={() => onDecline(call.id)}
-          disabled={declining === call.id || accepting === call.id}
-          className="btn-muted py-3.5 text-sm font-semibold"
-          style={{ borderRadius: 24, width: '35%' }}
-        >
-          {declining === call.id ? '...' : 'Rejeitar'}
-        </button>
-        <button
-          onClick={() => onAccept(call.id)}
-          disabled={accepting === call.id || declining === call.id}
-          className="btn-gold py-3.5 text-sm font-semibold"
-          style={{ borderRadius: 24, width: '60%' }}
-        >
-          {accepting === call.id ? (
-            <div className="animate-spin h-4 w-4 rounded-full border-2 mx-auto"
-                 style={{ borderColor: 'rgba(13,17,23,0.25)', borderTopColor: '#0D1117' }} />
-          ) : 'Aceitar'}
-        </button>
+        <div className="flex flex-col gap-1.5" style={{ width: '35%' }}>
+          <button
+            onClick={() => onDecline(call.id)}
+            disabled={declining === call.id || accepting === call.id}
+            className="btn-muted py-3.5 text-sm font-semibold w-full"
+            style={{ borderRadius: 24 }}
+          >
+            {declining === call.id ? '...' : 'Rejeitar'}
+          </button>
+          <p className="text-center leading-tight" style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
+            O chamado será enviado para outro técnico
+          </p>
+        </div>
+        <div className="flex flex-col gap-1.5" style={{ width: '60%' }}>
+          <button
+            onClick={() => onAccept(call.id)}
+            disabled={accepting === call.id || declining === call.id}
+            className="btn-gold py-3.5 text-sm font-semibold w-full"
+            style={{ borderRadius: 24 }}
+          >
+            {accepting === call.id ? (
+              <div className="animate-spin h-4 w-4 rounded-full border-2 mx-auto"
+                   style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
+            ) : 'Aceitar'}
+          </button>
+          <p className="text-center leading-tight" style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
+            Ao aceitar você receberá os dados do cliente e terá 60 minutos para iniciar o atendimento
+          </p>
+        </div>
       </div>
     </div>
   )
@@ -312,19 +322,34 @@ function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, goingOnTheWay,
       </div>
 
       {call.status === 'accepted' && (
-        <button onClick={() => onOnTheWay(call.id)} disabled={busy} className="btn-gold w-full py-2.5 text-sm">
-          {goingOnTheWay === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'A caminho'}
-        </button>
+        <div className="space-y-1.5">
+          <button onClick={() => onOnTheWay(call.id)} disabled={busy} className="btn-gold w-full py-2.5 text-sm">
+            {goingOnTheWay === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'A caminho'}
+          </button>
+          <p className="text-center leading-tight" style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
+            Clique para avisar o cliente que você está indo. Se não clicar em 60 minutos o chamado será redistribuído.
+          </p>
+        </div>
       )}
       {call.status === 'on_the_way' && (
-        <button onClick={() => onArrived(call.id)} disabled={busy} className="btn-gold w-full py-2.5 text-sm">
-          {arriving === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'Cheguei no local'}
-        </button>
+        <div className="space-y-1.5">
+          <button onClick={() => onArrived(call.id)} disabled={busy} className="btn-gold w-full py-2.5 text-sm">
+            {arriving === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'Cheguei no local'}
+          </button>
+          <p className="text-center leading-tight" style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
+            Clique quando chegar no endereço do cliente para ele saber que você está no local.
+          </p>
+        </div>
       )}
       {(call.status === 'arrived' || call.status === 'in_progress') && (
-        <button onClick={() => onComplete(call.id)} disabled={busy} className="btn-success w-full py-2.5 text-sm">
-          {completing === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'Marcar como concluído'}
-        </button>
+        <div className="space-y-1.5">
+          <button onClick={() => onComplete(call.id)} disabled={busy} className="btn-success w-full py-2.5 text-sm">
+            {completing === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'Marcar como concluído'}
+          </button>
+          <p className="text-center leading-tight" style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
+            Clique quando terminar o serviço. O cliente poderá avaliar seu atendimento.
+          </p>
+        </div>
       )}
     </div>
   )

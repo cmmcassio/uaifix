@@ -114,13 +114,13 @@
   /* Gold filled button */
   .btn-gold {
     @apply inline-flex items-center justify-center gap-2 font-bold transition-all;
-    background-color: #C9A84C;
-    color: #1A1A1A;
+    background-color: #3B82F6;
+    color: #FFFFFF;
     border-radius: 8px;
     padding: 14px 20px;
     font-size: 1rem;
   }
-  .btn-gold:hover:not(:disabled) { background-color: #E8C96E; }
+  .btn-gold:hover:not(:disabled) { background-color: #2563EB; }
   .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Gold outline button */

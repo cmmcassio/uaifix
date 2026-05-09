@@ -177,6 +177,14 @@ async def cancel_call(
     except Exception:
         raise HTTPException(400, "ID inválido.")
 
+    blocked = await db.calls.find_one({
+        "_id": oid,
+        "client_id": str(client["_id"]),
+        "status": {"$in": ["accepted", "on_the_way", "arrived"]},
+    })
+    if blocked:
+        raise HTTPException(400, "Não é possível cancelar após o técnico aceitar. Entre em contato com o suporte.")
+
     result = await db.calls.update_one(
         {"_id": oid, "client_id": str(client["_id"]),
          "status": {"$in": ["open", "no_technician_available"]}},
