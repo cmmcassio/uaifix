@@ -283,9 +283,17 @@ const ACTIVE_JOB_STATUS = {
   in_progress:{ label: 'Em andamento', cls: 'badge-active' },
 }
 
-function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, goingOnTheWay, arriving, completing }) {
+const CANCEL_REASONS = [
+  { value: 'client_no_answer', label: 'Cliente não atende o telefone' },
+  { value: 'part_unavailable', label: 'Peça não disponível no momento' },
+  { value: 'wrong_problem',    label: 'Problema diferente do descrito pelo cliente' },
+  { value: 'cannot_go',        label: 'Não consigo ir hoje',          warning: 'Essa opção gera advertência' },
+  { value: 'gave_up',          label: 'Desisti do atendimento',        warning: 'Essa opção gera advertência e suspensão de 24h' },
+]
+
+function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, onTechCancel, goingOnTheWay, arriving, completing, techCancelling }) {
   const statusInfo = ACTIVE_JOB_STATUS[call.status] ?? ACTIVE_JOB_STATUS.accepted
-  const busy = goingOnTheWay === call.id || arriving === call.id || completing === call.id
+  const busy = goingOnTheWay === call.id || arriving === call.id || completing === call.id || techCancelling === call.id
 
   const deadline30 = call.status === 'accepted' && call.accepted_at
     ? addMinutes(call.accepted_at, 30) : null
@@ -296,7 +304,65 @@ function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, goingOnTheWay,
   const timerUrgent = secsLeft30 !== null && secsLeft30 < 300
   const timerPulse  = secsLeft30 !== null && secsLeft30 < 120
 
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [selectedReason, setSelectedReason] = useState(null)
+
+  const handleConfirmCancel = () => {
+    if (!selectedReason) return
+    onTechCancel(call.id, selectedReason)
+    setShowCancelModal(false)
+    setSelectedReason(null)
+  }
+
   return (
+    <>
+    {showCancelModal && (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4"
+           style={{ background: 'rgba(0,0,0,0.5)' }}>
+        <div className="w-full max-w-sm rounded-2xl p-5 space-y-4"
+             style={{ background: '#FBF8F2', border: '1px solid rgba(239,68,68,0.25)' }}>
+          <p className="font-bold text-base" style={{ color: '#991B1B' }}>Cancelar atendimento</p>
+          <p className="text-sm" style={{ color: 'rgba(26,26,26,0.55)' }}>Selecione o motivo do cancelamento:</p>
+          <div className="space-y-2">
+            {CANCEL_REASONS.map((r) => {
+              const selected = selectedReason === r.value
+              return (
+                <button
+                  key={r.value}
+                  onClick={() => setSelectedReason(r.value)}
+                  className="w-full text-left rounded-xl px-4 py-3 transition-all"
+                  style={{
+                    background: selected ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.8)',
+                    border: `1px solid ${selected ? 'rgba(239,68,68,0.4)' : 'rgba(201,168,76,0.2)'}`,
+                  }}
+                >
+                  <p className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{r.label}</p>
+                  {r.warning && (
+                    <p className="text-xs mt-0.5 font-semibold" style={{ color: '#DC2626' }}>⚠️ {r.warning}</p>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={() => { setShowCancelModal(false); setSelectedReason(null) }}
+              className="btn-muted flex-1 py-2.5 text-sm"
+            >
+              Voltar
+            </button>
+            <button
+              onClick={handleConfirmCancel}
+              disabled={!selectedReason || techCancelling === call.id}
+              className="btn-danger flex-1 py-2.5 text-sm"
+            >
+              {techCancelling === call.id ? <div className="spinner h-4 w-4 border-2 mx-auto" /> : 'Confirmar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="card-success p-4 space-y-3">
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -371,7 +437,23 @@ function ActiveJobCard({ call, onOnTheWay, onArrived, onComplete, goingOnTheWay,
           </p>
         </div>
       )}
+
+      <div className="pt-1">
+        <button
+          onClick={() => setShowCancelModal(true)}
+          disabled={busy}
+          className="w-full py-2 text-xs font-semibold rounded-xl transition-all"
+          style={{
+            background: 'transparent',
+            color: 'rgba(220,38,38,0.7)',
+            border: '1px solid rgba(220,38,38,0.25)',
+          }}
+        >
+          Cancelar atendimento
+        </button>
+      </div>
     </div>
+    </>
   )
 }
 
@@ -445,6 +527,7 @@ export default function TechnicianDashboard() {
   const [goingOnTheWay, setGoingOnTheWay] = useState(null)
   const [arriving, setArriving] = useState(null)
   const [completing, setCompleting] = useState(null)
+  const [techCancelling, setTechCancelling] = useState(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [warningToast, setWarningToast] = useState(false)
@@ -577,6 +660,22 @@ export default function TechnicianDashboard() {
       setError(err.response?.data?.detail || 'Erro ao atualizar status.')
     } finally {
       setArriving(null)
+    }
+  }
+
+  const techCancel = async (callId, reason) => {
+    setTechCancelling(callId)
+    setError('')
+    try {
+      await api.post(`/calls/${callId}/technician-cancel`, { reason })
+      setToast('Atendimento cancelado. O chamado voltou para a fila.')
+      setTimeout(() => setToast(''), 4000)
+      await fetchAll()
+      setTab('available')
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao cancelar atendimento.')
+    } finally {
+      setTechCancelling(null)
     }
   }
 
@@ -869,9 +968,11 @@ export default function TechnicianDashboard() {
                 onOnTheWay={markOnTheWay}
                 onArrived={markArrived}
                 onComplete={complete}
+                onTechCancel={techCancel}
                 goingOnTheWay={goingOnTheWay}
                 arriving={arriving}
                 completing={completing}
+                techCancelling={techCancelling}
               />
             ))
           })()

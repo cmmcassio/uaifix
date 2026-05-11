@@ -459,6 +459,74 @@ async def arrived(
     return {"message": "Status atualizado: chegou no local."}
 
 
+TECHNICIAN_CANCEL_REASONS = {
+    "client_no_answer",
+    "part_unavailable",
+    "wrong_problem",
+    "cannot_go",
+    "gave_up",
+}
+TECHNICIAN_CANCEL_PENALTY = {"cannot_go", "gave_up"}
+
+
+@router.post("/{call_id}/technician-cancel")
+async def technician_cancel_call(
+    call_id: str,
+    body: dict,
+    technician=Depends(get_current_technician),
+    db=Depends(get_db),
+):
+    reason = (body.get("reason") or "").strip()
+    if reason not in TECHNICIAN_CANCEL_REASONS:
+        raise HTTPException(400, "Motivo de cancelamento inválido.")
+
+    try:
+        oid = ObjectId(call_id)
+    except Exception:
+        raise HTTPException(400, "ID inválido.")
+
+    now = datetime.utcnow()
+    result = await db.calls.update_one(
+        {
+            "_id": oid,
+            "technician_id": str(technician["_id"]),
+            "status": {"$in": ["accepted", "on_the_way", "arrived", "in_progress"]},
+        },
+        {"$set": {
+            "status": "open",
+            "technician_id": None,
+            "technician_name": None,
+            "accepted_at": None,
+            "on_the_way_at": None,
+            "arrived_at": None,
+            "offered_to": "all",
+            "offer_expires_at": now + timedelta(minutes=10),
+            "declined_by": [],
+            "cancel_reason": reason,
+            "updated_at": now,
+        }},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(400, "Chamado não encontrado ou não pode ser cancelado.")
+
+    if reason in TECHNICIAN_CANCEL_PENALTY:
+        from app.dispatch import _warn_technician
+        await _warn_technician(db, str(technician["_id"]), now)
+        if reason == "gave_up":
+            try:
+                await db.technicians.update_one(
+                    {"_id": technician["_id"], "$or": [
+                        {"suspended_until": None},
+                        {"suspended_until": {"$lt": now + timedelta(hours=24)}},
+                    ]},
+                    {"$set": {"suspended_until": now + timedelta(hours=24), "updated_at": now}},
+                )
+            except Exception:
+                pass
+
+    return {"message": "Atendimento cancelado. O chamado voltou para a fila."}
+
+
 @router.post("/{call_id}/decline")
 async def decline_call(
     call_id: str,
