@@ -111,7 +111,7 @@ async def _update_tech_avg_rating(db: AsyncIOMotorDatabase, technician_id: str):
 
 
 async def _warn_technician(db: AsyncIOMotorDatabase, technician_id: str, now: datetime):
-    """Adiciona advertência ao técnico e suspende por 48h ao atingir 3."""
+    """Adiciona advertência ao técnico e suspende conforme acúmulo no mês."""
     try:
         oid = ObjectId(technician_id)
     except Exception:
@@ -121,16 +121,22 @@ async def _warn_technician(db: AsyncIOMotorDatabase, technician_id: str, now: da
         {"$inc": {"warnings_count": 1}, "$set": {"updated_at": now}},
     )
     tech = await db.technicians.find_one({"_id": oid}, {"warnings_count": 1})
-    if tech and tech.get("warnings_count", 0) >= 3:
-        await db.technicians.update_one(
-            {"_id": oid},
-            {"$set": {"suspended_until": now + timedelta(hours=48), "updated_at": now}},
-        )
+    wc = tech.get("warnings_count", 0) if tech else 0
+    if wc >= 5:
+        suspension = now + timedelta(days=7)
+    elif wc >= 3:
+        suspension = now + timedelta(hours=48)
+    else:
+        return
+    await db.technicians.update_one(
+        {"_id": oid},
+        {"$set": {"suspended_until": suspension, "updated_at": now}},
+    )
 
 
 async def _handle_abandoned_calls(db: AsyncIOMotorDatabase, now: datetime):
-    """Detecta chamados em 'accepted' há mais de 60min sem progresso e penaliza o técnico."""
-    cutoff = now - timedelta(minutes=60)
+    """Detecta chamados em 'accepted' há mais de 30min sem progresso e penaliza o técnico."""
+    cutoff = now - timedelta(minutes=30)
     abandoned = await db.calls.find({
         "status": "accepted",
         "accepted_at": {"$lt": cutoff},
@@ -146,18 +152,27 @@ async def _handle_abandoned_calls(db: AsyncIOMotorDatabase, now: datetime):
                     "technician_id": None,
                     "technician_name": None,
                     "accepted_at": None,
-                    "offered_to": None,
-                    "offer_expires_at": None,
+                    "offered_to": "all",
+                    "offer_expires_at": now + timedelta(minutes=10),
                     "updated_at": now,
+                    "declined_by": [],
                 },
-                "$push": {"declined_by": tech_id},
             },
         )
         if result.modified_count > 0 and tech_id:
             await _warn_technician(db, tech_id, now)
-            call_updated = await db.calls.find_one({"_id": call["_id"], "status": "open"})
-            if call_updated:
-                await _assign_offer(db, call_updated, now)
+            # Suspensão imediata de 24h pelo abandono, independente do total de advertências
+            try:
+                oid = ObjectId(tech_id)
+                await db.technicians.update_one(
+                    {"_id": oid, "$or": [
+                        {"suspended_until": None},
+                        {"suspended_until": {"$lt": now + timedelta(hours=24)}},
+                    ]},
+                    {"$set": {"suspended_until": now + timedelta(hours=24), "updated_at": now}},
+                )
+            except Exception:
+                pass
 
 
 async def expire_and_dispatch(db: AsyncIOMotorDatabase):

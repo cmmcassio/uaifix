@@ -284,13 +284,17 @@ async def available_calls(
     if technician.get("status") != "approved":
         raise HTTPException(403, "Apenas técnicos aprovados podem ver chamados disponíveis.")
 
+    now = datetime.utcnow()
+    suspended_until = technician.get("suspended_until")
+    if suspended_until and now < suspended_until:
+        return []
+
     tech_city = (technician.get("address") or {}).get("city", "")
     if not tech_city:
         return []
 
     tech_id = str(technician["_id"])
     city_pattern = re.compile(f"^{re.escape(tech_city)}$", re.IGNORECASE)
-    now = datetime.utcnow()
 
     cursor = db.calls.find({
         "status": "open",
