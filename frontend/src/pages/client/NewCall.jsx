@@ -132,6 +132,13 @@ export default function NewCall() {
         city: form.city.trim(),
         state: form.state.toUpperCase().trim(),
       })
+      if (window.gtag) {
+        window.gtag('event', 'chamado_criado', {
+          event_category: 'chamado',
+          event_label: form.appliance_type,
+          value: 1,
+        })
+      }
       navigate('/cliente/dashboard', { state: { callCreated: true } })
     } catch (err) {
       setGlobalError(err.response?.data?.detail || 'Erro ao abrir chamado. Tente novamente.')

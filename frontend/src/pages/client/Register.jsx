@@ -59,6 +59,12 @@ export default function ClientRegister() {
         email: form.email.toLowerCase().trim(),
         password: form.password,
       })
+      if (window.gtag) {
+        window.gtag('event', 'cadastro_cliente', {
+          event_category: 'registro',
+          value: 1,
+        })
+      }
       setSuccess(true)
     } catch (err) {
       setGlobalError(err.response?.data?.detail || 'Erro ao criar conta. Tente novamente.')
