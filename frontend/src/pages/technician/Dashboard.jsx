@@ -492,9 +492,12 @@ function HistoryCard({ call }) {
   )
 }
 
+let _unlockedCtx = null
+
 const playAlert = () => {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const ctx = _unlockedCtx || new (window.AudioContext || window.webkitAudioContext)()
+    if (ctx.state === 'suspended') ctx.resume()
     const beep = (delay) => {
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
@@ -573,6 +576,7 @@ export default function TechnicianDashboard() {
   const [toast, setToast] = useState('')
   const [warningToast, setWarningToast] = useState(false)
   const [suspensionDismissed, setSuspensionDismissed] = useState(false)
+  const [soundActivated, setSoundActivated] = useState(false)
   const prevWarningsRef = useRef(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const photoInputRef = useRef(null)
@@ -641,6 +645,34 @@ export default function TechnicianDashboard() {
     }
     prevWarningsRef.current = wc
   }, [subscriptionInfo])
+
+  const activateSound = () => {
+    try {
+      if (!_unlockedCtx) {
+        _unlockedCtx = new (window.AudioContext || window.webkitAudioContext)()
+      }
+      if (_unlockedCtx.state === 'suspended') _unlockedCtx.resume()
+      // Silent micro-beep to unlock audio on mobile
+      const osc = _unlockedCtx.createOscillator()
+      const gain = _unlockedCtx.createGain()
+      osc.connect(gain); gain.connect(_unlockedCtx.destination)
+      gain.gain.setValueAtTime(0.001, _unlockedCtx.currentTime)
+      osc.start(); osc.stop(_unlockedCtx.currentTime + 0.001)
+    } catch(e) {}
+    setSoundActivated(true)
+    localStorage.setItem('uaifix_sound_activated', '1')
+  }
+
+  useEffect(() => {
+    if (localStorage.getItem('uaifix_sound_activated') === '1') {
+      setSoundActivated(true)
+      try {
+        if (!_unlockedCtx) {
+          _unlockedCtx = new (window.AudioContext || window.webkitAudioContext)()
+        }
+      } catch(e) {}
+    }
+  }, [])
 
   const clearAlert = () => {
     if (alertIntervalRef.current) { clearInterval(alertIntervalRef.current); alertIntervalRef.current = null }
@@ -794,7 +826,7 @@ export default function TechnicianDashboard() {
           className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-3 px-4 animate-pulse"
           style={{ background: '#3B82F6', color: '#FFFFFF' }}
         >
-          <span className="font-bold text-base">🔔 Novo chamado disponível! Aceite agora.</span>
+          <span className="font-bold text-base">🔔 NOVO CHAMADO! Toque para aceitar</span>
         </div>
       )}
 
@@ -832,6 +864,16 @@ export default function TechnicianDashboard() {
             className="hidden"
             onChange={uploadPhoto}
           />
+          <button
+            onClick={soundActivated ? undefined : activateSound}
+            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all"
+            style={soundActivated
+              ? { border: '1px solid rgba(74,222,128,0.35)', color: '#16a34a', background: 'rgba(74,222,128,0.08)', cursor: 'default' }
+              : { border: '1px solid #3B82F6', color: '#3B82F6', background: 'rgba(59,130,246,0.06)', cursor: 'pointer' }
+            }
+          >
+            {soundActivated ? '🔔 Som ativado' : '🔔 Ativar som'}
+          </button>
           <button
             onClick={() => photoInputRef.current?.click()}
             disabled={uploadingPhoto}

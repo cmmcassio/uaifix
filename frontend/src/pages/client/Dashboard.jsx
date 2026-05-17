@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../api/client'
@@ -111,6 +111,19 @@ function CallProgressBar({ status }) {
   )
 }
 
+function parseDate(iso) {
+  if (typeof iso === 'string' && !iso.endsWith('Z') && !/[+\-]\d\d:\d\d$/.test(iso)) {
+    return new Date(iso + 'Z')
+  }
+  return new Date(iso)
+}
+
+const TRUST_MESSAGES = [
+  'Todos os técnicos da sua cidade foram notificados',
+  'Seu chamado está ativo e sendo visualizado',
+  'O primeiro técnico disponível vai aceitar',
+]
+
 function timeAgo(iso) {
   const diff = Math.floor((Date.now() - new Date(iso)) / 1000)
   if (diff < 60) return 'agora mesmo'
@@ -133,6 +146,9 @@ export default function ClientDashboard() {
   const [ratingComment, setRatingComment] = useState('')
   const [submittingRating, setSubmittingRating] = useState(false)
   const [ratingError, setRatingError] = useState('')
+  const [tick, setTick] = useState(0)
+  const [rotatingIdx, setRotatingIdx] = useState(0)
+  const prevStatusRef = useRef(null)
 
   useEffect(() => {
     if (!user || user.role !== 'client') navigate('/cliente/login')
@@ -163,6 +179,40 @@ export default function ClientDashboard() {
 
   const activeCall = calls.find((c) => ['open', 'no_technician_available', 'accepted', 'on_the_way', 'arrived', 'in_progress'].includes(c.status))
   const pendingRating = !activeCall && calls.find((c) => c.status === 'completed' && !c.rated_by_client)
+
+  // Tick every second when waiting, to refresh the timer display
+  useEffect(() => {
+    if (activeCall?.status !== 'open') return
+    const id = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [activeCall?.status, activeCall?.id])
+
+  // Rotate trust messages every 5s when waiting
+  useEffect(() => {
+    if (activeCall?.status !== 'open') return
+    const id = setInterval(() => setRotatingIdx(i => (i + 1) % TRUST_MESSAGES.length), 5000)
+    return () => clearInterval(id)
+  }, [activeCall?.status, activeCall?.id])
+
+  // Detect open → accepted transition: play sound + vibrate + toast
+  useEffect(() => {
+    const status = activeCall?.status ?? null
+    if (prevStatusRef.current === 'open' && status === 'accepted') {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.frequency.value = 880; osc.type = 'sine'
+        gain.gain.setValueAtTime(0.35, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+        osc.start(); osc.stop(ctx.currentTime + 0.5)
+      } catch(e) {}
+      try { navigator.vibrate([200, 100, 200]) } catch(e) {}
+      setToast('✅ Técnico encontrado! Confira os detalhes abaixo.')
+    }
+    prevStatusRef.current = status
+  }, [activeCall?.status])
 
   const cancel = async () => {
     if (!activeCall || !window.confirm('Cancelar o chamado?')) return
@@ -276,6 +326,74 @@ export default function ClientDashboard() {
               </button>
             </div>
           </div>
+
+        ) : activeCall?.status === 'open' ? (() => {
+          const waitTotalSecs = Math.max(0, Math.floor((Date.now() - parseDate(activeCall.created_at).getTime()) / 1000))
+          const waitMins = Math.floor(waitTotalSecs / 60)
+          const waitSecsDisplay = waitTotalSecs % 60
+          const timerText = waitTotalSecs < 60
+            ? `${waitTotalSecs} ${waitTotalSecs === 1 ? 'segundo' : 'segundos'}`
+            : `${waitMins} ${waitMins === 1 ? 'minuto' : 'minutos'} e ${waitSecsDisplay}s`
+          return (
+            <div className="card p-6 space-y-5 text-center">
+              {/* Pulsing circle */}
+              <div className="flex justify-center pt-2">
+                <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
+                  <div className="absolute rounded-full animate-ping"
+                       style={{ width: 80, height: 80, background: 'rgba(59,130,246,0.18)' }} />
+                  <div className="absolute rounded-full animate-pulse"
+                       style={{ width: 96, height: 96, background: 'rgba(59,130,246,0.08)' }} />
+                  <div className="relative flex items-center justify-center rounded-full"
+                       style={{ width: 60, height: 60, background: '#3B82F6' }}>
+                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round"
+                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Title + subtitle */}
+              <div>
+                <h2 className="text-xl font-bold text-cream">Buscando técnico...</h2>
+                <p className="text-sm text-cream/55 mt-1.5 leading-relaxed">
+                  Estamos conectando você ao técnico mais próximo
+                </p>
+              </div>
+
+              {/* Animated dots */}
+              <div className="flex justify-center gap-2">
+                {[0, 1, 2].map(i => (
+                  <span key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
+                        style={{ background: '#3B82F6', animationDelay: `${i * 0.18}s` }} />
+                ))}
+              </div>
+
+              {/* Timer */}
+              <p className="text-sm text-cream/40">
+                Aguardando há <span className="font-semibold tabular-nums">{timerText}</span>
+              </p>
+
+              {/* Rotating trust message */}
+              <div className="rounded-xl px-4 py-3"
+                   style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}>
+                <p className="text-sm font-medium" style={{ color: '#3B82F6' }}>
+                  {TRUST_MESSAGES[rotatingIdx]}
+                </p>
+              </div>
+
+              {/* Cancel */}
+              <div className="space-y-1.5 pt-1">
+                <button onClick={cancel} disabled={cancelling} className="btn-danger w-full py-2.5 text-sm">
+                  {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
+                </button>
+                <p style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
+                  Cancelar enquanto busca técnico não gera penalidade
+                </p>
+              </div>
+            </div>
+          )
+        })()
 
         ) : activeCall?.status === 'no_technician_available' ? (
           <div className="card p-5 space-y-4">
@@ -411,17 +529,6 @@ export default function ClientDashboard() {
                     ))}
                   </div>
                 )}
-              </div>
-            )}
-
-            {activeCall.status === 'open' && (
-              <div className="space-y-1.5">
-                <button onClick={cancel} disabled={cancelling} className="btn-danger w-full py-2.5 text-sm">
-                  {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
-                </button>
-                <p className="text-center" style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
-                  Cancelar enquanto busca técnico não gera penalidade
-                </p>
               </div>
             )}
 
