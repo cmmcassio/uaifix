@@ -512,6 +512,47 @@ const playAlert = () => {
   try { navigator.vibrate([500, 200, 500, 200, 500]) } catch(e) {}
 }
 
+const PIX_LINK = 'https://nubank.com.br/cobrar/12w67k/6a08e22a-e34c-4db5-9923-d89aae7eb169'
+
+function PaymentCard() {
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      border: '1.5px solid #3B82F6',
+      borderRadius: 12,
+      padding: 20,
+    }}>
+      <p style={{ fontWeight: 700, fontSize: 16, color: '#1A1A1A', marginBottom: 4 }}>
+        Dados para pagamento
+      </p>
+      <p style={{ fontWeight: 700, fontSize: 20, color: '#3B82F6', marginBottom: 12 }}>
+        R$ 59,00 / mês
+      </p>
+      <div style={{ borderTop: '1px solid rgba(59,130,246,0.15)', marginBottom: 12 }} />
+      <a
+        href={PIX_LINK}
+        target="_blank"
+        rel="noreferrer"
+        className="btn-gold w-full"
+        style={{ borderRadius: 24, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }}
+      >
+        Pagar R$59,00 via PIX
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+        </svg>
+      </a>
+      <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(26,26,26,0.45)', marginTop: 8 }}>
+        Você será redirecionado para o Nubank para concluir o pagamento
+      </p>
+      <div style={{ borderTop: '1px solid rgba(59,130,246,0.15)', margin: '12px 0' }} />
+      <p style={{ fontSize: 13, color: 'rgba(26,26,26,0.55)', textAlign: 'center' }}>
+        Após o pagamento, envie o comprovante abaixo para ativar sua conta
+      </p>
+    </div>
+  )
+}
+
 export default function TechnicianDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -831,26 +872,47 @@ export default function TechnicianDashboard() {
 
       {subscriptionInfo?.subscription_status === 'trial' && subscriptionInfo?.trial_started_at && (() => {
         const daysLeft = Math.max(0, 30 - Math.floor((Date.now() - new Date(subscriptionInfo.trial_started_at)) / 86400000))
+        if (daysLeft > 5) {
+          return (
+            <div className="px-4 py-2.5 text-sm text-center font-medium"
+                 style={{ background: 'rgba(201,168,76,0.12)', color: '#C9A84C', borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
+              Período de teste: {daysLeft} {daysLeft === 1 ? 'dia restante' : 'dias restantes'}
+            </div>
+          )
+        }
         return (
-          <div className="px-4 py-2.5 text-sm text-center font-medium"
-               style={{ background: 'rgba(201,168,76,0.12)', color: '#C9A84C', borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-            Período de teste: {daysLeft} {daysLeft === 1 ? 'dia restante' : 'dias restantes'}
+          <div className="px-4 py-4 space-y-3"
+               style={{ background: 'rgba(234,179,8,0.07)', borderBottom: '1px solid rgba(234,179,8,0.2)' }}>
+            <p className="text-sm font-semibold text-center" style={{ color: '#92400E' }}>
+              Seu período de teste acaba em {daysLeft} {daysLeft === 1 ? 'dia' : 'dias'}. Renove agora para não perder acesso.
+            </p>
+            <PaymentCard />
+            <input ref={proofInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
+                   className="hidden" onChange={uploadProof} />
+            <button
+              onClick={() => proofInputRef.current?.click()}
+              disabled={uploadingProof}
+              className="btn-ghost w-full py-2 text-sm disabled:opacity-50"
+            >
+              {uploadingProof ? 'Enviando...' : 'Enviar comprovante PIX'}
+            </button>
           </div>
         )
       })()}
 
       {subscriptionInfo?.subscription_status === 'expired' && (
-        <div className="px-4 py-3 space-y-2"
-             style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)' }}>
-          <p className="text-sm font-medium text-center" style={{ color: '#F87171' }}>
+        <div className="px-4 py-4 space-y-3"
+             style={{ background: 'rgba(239,68,68,0.06)', borderBottom: '1px solid rgba(239,68,68,0.2)' }}>
+          <p className="text-sm font-semibold text-center" style={{ color: '#DC2626' }}>
             Assinatura expirada. Faça o pagamento para continuar recebendo chamados.
           </p>
+          <PaymentCard />
           <input ref={proofInputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
                  className="hidden" onChange={uploadProof} />
           <button
             onClick={() => proofInputRef.current?.click()}
             disabled={uploadingProof}
-            className="btn-gold w-full py-2 text-sm disabled:opacity-50"
+            className="btn-ghost w-full py-2 text-sm disabled:opacity-50"
           >
             {uploadingProof ? 'Enviando...' : 'Enviar comprovante PIX'}
           </button>
