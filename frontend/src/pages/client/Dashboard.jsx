@@ -266,6 +266,15 @@ export default function ClientDashboard() {
 
   if (!user) return null
 
+  const waitTotalSecs = activeCall?.status === 'open'
+    ? Math.max(0, Math.floor((Date.now() - parseDate(activeCall.created_at).getTime()) / 1000))
+    : 0
+  const waitMins = Math.floor(waitTotalSecs / 60)
+  const waitSecsDisplay = waitTotalSecs % 60
+  const timerText = waitTotalSecs < 60
+    ? `${waitTotalSecs} ${waitTotalSecs === 1 ? 'segundo' : 'segundos'}`
+    : `${waitMins} ${waitMins === 1 ? 'minuto' : 'minutos'} e ${waitSecsDisplay}s`
+
   return (
     <div className="min-h-screen">
       <header className="app-header px-6 py-4 flex items-center justify-between">
@@ -327,73 +336,58 @@ export default function ClientDashboard() {
             </div>
           </div>
 
-        ) : activeCall?.status === 'open' ? (() => {
-          const waitTotalSecs = Math.max(0, Math.floor((Date.now() - parseDate(activeCall.created_at).getTime()) / 1000))
-          const waitMins = Math.floor(waitTotalSecs / 60)
-          const waitSecsDisplay = waitTotalSecs % 60
-          const timerText = waitTotalSecs < 60
-            ? `${waitTotalSecs} ${waitTotalSecs === 1 ? 'segundo' : 'segundos'}`
-            : `${waitMins} ${waitMins === 1 ? 'minuto' : 'minutos'} e ${waitSecsDisplay}s`
-          return (
-            <div className="card p-6 space-y-5 text-center">
-              {/* Pulsing circle */}
-              <div className="flex justify-center pt-2">
-                <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
-                  <div className="absolute rounded-full animate-ping"
-                       style={{ width: 80, height: 80, background: 'rgba(59,130,246,0.18)' }} />
-                  <div className="absolute rounded-full animate-pulse"
-                       style={{ width: 96, height: 96, background: 'rgba(59,130,246,0.08)' }} />
-                  <div className="relative flex items-center justify-center rounded-full"
-                       style={{ width: 60, height: 60, background: '#3B82F6' }}>
-                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round"
-                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                  </div>
+        ) : activeCall?.status === 'open' ? (
+          <div className="card p-6 space-y-5 text-center">
+            <div className="flex justify-center pt-2">
+              <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
+                <div className="absolute rounded-full animate-ping"
+                     style={{ width: 80, height: 80, background: 'rgba(59,130,246,0.18)' }} />
+                <div className="absolute rounded-full animate-pulse"
+                     style={{ width: 96, height: 96, background: 'rgba(59,130,246,0.08)' }} />
+                <div className="relative flex items-center justify-center rounded-full"
+                     style={{ width: 60, height: 60, background: '#3B82F6' }}>
+                  <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round"
+                      d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                  </svg>
                 </div>
               </div>
-
-              {/* Title + subtitle */}
-              <div>
-                <h2 className="text-xl font-bold text-cream">Buscando técnico...</h2>
-                <p className="text-sm text-cream/55 mt-1.5 leading-relaxed">
-                  Estamos conectando você ao técnico mais próximo
-                </p>
-              </div>
-
-              {/* Animated dots */}
-              <div className="flex justify-center gap-2">
-                {[0, 1, 2].map(i => (
-                  <span key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
-                        style={{ background: '#3B82F6', animationDelay: `${i * 0.18}s` }} />
-                ))}
-              </div>
-
-              {/* Timer */}
-              <p className="text-sm text-cream/40">
-                Aguardando há <span className="font-semibold tabular-nums">{timerText}</span>
-              </p>
-
-              {/* Rotating trust message */}
-              <div className="rounded-xl px-4 py-3"
-                   style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}>
-                <p className="text-sm font-medium" style={{ color: '#3B82F6' }}>
-                  {TRUST_MESSAGES[rotatingIdx]}
-                </p>
-              </div>
-
-              {/* Cancel */}
-              <div className="space-y-1.5 pt-1">
-                <button onClick={cancel} disabled={cancelling} className="btn-danger w-full py-2.5 text-sm">
-                  {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
-                </button>
-                <p style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
-                  Cancelar enquanto busca técnico não gera penalidade
-                </p>
-              </div>
             </div>
-          )
-        })()
+
+            <div>
+              <h2 className="text-xl font-bold text-cream">Buscando técnico...</h2>
+              <p className="text-sm text-cream/55 mt-1.5 leading-relaxed">
+                Estamos conectando você ao técnico mais próximo
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-2">
+              {[0, 1, 2].map(i => (
+                <span key={i} className="w-2.5 h-2.5 rounded-full animate-bounce"
+                      style={{ background: '#3B82F6', animationDelay: `${i * 0.18}s` }} />
+              ))}
+            </div>
+
+            <p className="text-sm text-cream/40">
+              Aguardando há <span className="font-semibold tabular-nums">{timerText}</span>
+            </p>
+
+            <div className="rounded-xl px-4 py-3"
+                 style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}>
+              <p className="text-sm font-medium" style={{ color: '#3B82F6' }}>
+                {TRUST_MESSAGES[rotatingIdx]}
+              </p>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              <button onClick={cancel} disabled={cancelling} className="btn-danger w-full py-2.5 text-sm">
+                {cancelling ? 'Cancelando...' : 'Cancelar chamado'}
+              </button>
+              <p style={{ fontSize: 13, color: 'rgba(26,26,26,0.4)' }}>
+                Cancelar enquanto busca técnico não gera penalidade
+              </p>
+            </div>
+          </div>
 
         ) : activeCall?.status === 'no_technician_available' ? (
           <div className="card p-5 space-y-4">
