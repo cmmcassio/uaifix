@@ -556,6 +556,12 @@ function PaymentCard() {
   )
 }
 
+const WAITING_MESSAGES = [
+  'Clientes estão buscando técnicos na sua cidade agora',
+  'Seu perfil está ativo e visível para os clientes',
+  'O próximo chamado pode chegar a qualquer momento',
+]
+
 export default function TechnicianDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
